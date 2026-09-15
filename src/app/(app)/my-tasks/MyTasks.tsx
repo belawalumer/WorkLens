@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Task } from '@/types'
 
@@ -44,7 +45,6 @@ interface EstimateEdit {
 }
 
 export default function MyTasks({ initialTasks, userId }: Props) {
-  const [tasks, setTasks] = useState(initialTasks)
   const [view, setView] = useState<'today' | 'week'>('today')
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ title: '', estimated_hours: '1', task_date: TODAY })
@@ -54,25 +54,22 @@ export default function MyTasks({ initialTasks, userId }: Props) {
   const [activeDay, setActiveDay] = useState(TODAY)
   const supabase = createClient()
 
-  useEffect(() => {
-    // Fresh fetch on mount to catch tasks added/deleted while navigating
-    supabase.from('tasks').select('*, project:projects(id, name)')
+  const { data: tasks = initialTasks, mutate: mutateTasks } = useSWR(
+    ['my-tasks', userId],
+    async () => (await supabase.from('tasks').select('*, project:projects(id, name)')
       .eq('developer_id', userId)
       .order('task_date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setTasks(data) })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+      .order('created_at', { ascending: false })).data ?? [],
+    { fallbackData: initialTasks, revalidateOnFocus: true },
+  )
 
   useEffect(() => {
     const channel = supabase
       .channel('my-tasks')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `developer_id=eq.${userId}` }, payload => {
-        setTasks(prev => {
-          if (payload.eventType === 'INSERT') return [payload.new as Task, ...prev]
-          if (payload.eventType === 'UPDATE') return prev.map(t => t.id === (payload.new as Task).id ? payload.new as Task : t)
-          if (payload.eventType === 'DELETE') return prev.filter(t => t.id !== (payload.old as Task).id)
-          return prev
-        })
+        if (payload.eventType === 'INSERT') mutateTasks(prev => [payload.new as Task, ...(prev ?? [])], false)
+        else if (payload.eventType === 'UPDATE') mutateTasks(prev => (prev ?? []).map(t => t.id === (payload.new as Task).id ? payload.new as Task : t), false)
+        else if (payload.eventType === 'DELETE') mutateTasks(prev => (prev ?? []).filter(t => t.id !== (payload.old as Task).id), false)
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
@@ -95,19 +92,19 @@ export default function MyTasks({ initialTasks, userId }: Props) {
   }
 
   async function toggleDone(task: Task) {
-    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t))
+    mutateTasks(prev => (prev ?? []).map(t => t.id === task.id ? { ...t, completed: !t.completed } : t), false)
     await supabase.from('tasks').update({ completed: !task.completed }).eq('id', task.id)
   }
 
   async function deleteTask(id: string) {
-    setTasks(prev => prev.filter(t => t.id !== id))
+    mutateTasks(prev => (prev ?? []).filter(t => t.id !== id), false)
     await supabase.from('tasks').delete().eq('id', id)
   }
 
   async function saveTitleEdit(taskId: string, newTitle: string) {
     const trimmed = newTitle.trim()
     if (!trimmed) { setEditingTitle(null); return }
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title: trimmed } : t))
+    mutateTasks(prev => (prev ?? []).map(t => t.id === taskId ? { ...t, title: trimmed } : t), false)
     setEditingTitle(null)
     await supabase.from('tasks').update({ title: trimmed }).eq('id', taskId)
   }
@@ -129,7 +126,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
       estimated_hours: newHours,
       ...(newHours !== estimateEdit.originalHours ? { estimate_change_reason: estimateEdit.reason.trim() } : {}),
     }
-    setTasks(prev => prev.map(t => t.id === estimateEdit!.taskId ? { ...t, ...update } : t))
+    mutateTasks(prev => (prev ?? []).map(t => t.id === estimateEdit!.taskId ? { ...t, ...update } : t), false)
     await supabase.from('tasks').update(update).eq('id', estimateEdit.taskId)
     setEstimateEdit(null)
   }

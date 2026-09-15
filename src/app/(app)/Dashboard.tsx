@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import useSWR from 'swr'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ReferenceLine, Cell, PieChart, Pie,
@@ -161,13 +162,32 @@ const DONUT_STATUS = [
 export default function Dashboard({
   profiles: initProfiles, roles: initRoles, tasks: initTasks, currentUserId, currentUserRole,
 }: Props) {
-  const [profiles, setProfiles] = useState(initProfiles)
-  const [roles, setRoles] = useState(initRoles)
-  const [tasks, setTasks] = useState(initTasks)
   const [viewMode, setViewMode] = useState<ViewMode>('today')
   const [filter, setFilter] = useState<FilterStatus>('all')
   const [toast, setToast] = useState('')
   const supabase = createClient()
+
+  const weekStart = useMemo(() => {
+    const d = new Date(); const day = d.getDay()
+    d.setDate(d.getDate() - day + (day === 0 ? -6 : 1))
+    return d.toISOString().split('T')[0]
+  }, [])
+
+  const { data: tasks = initTasks, mutate: mutateTasks } = useSWR(
+    'dashboard-tasks',
+    async () => (await supabase.from('tasks').select('*, project:projects(id, name)').gte('task_date', weekStart)).data ?? [],
+    { fallbackData: initTasks, revalidateOnFocus: true },
+  )
+  const { data: profiles = initProfiles, mutate: mutateProfiles } = useSWR(
+    'profiles',
+    async () => (await supabase.from('profiles').select('*').order('full_name')).data ?? [],
+    { fallbackData: initProfiles, revalidateOnFocus: true },
+  )
+  const { data: roles = initRoles, mutate: mutateRoles } = useSWR(
+    'developer-roles',
+    async () => (await supabase.from('developer_roles').select('*, project:projects(id, name)')).data ?? [],
+    { fallbackData: initRoles },
+  )
 
   const showToast = useCallback((msg: string) => {
     setToast(msg)
@@ -175,37 +195,22 @@ export default function Dashboard({
   }, [])
 
   useEffect(() => {
-    // Fresh fetch on mount to catch tasks deleted/added while navigating
-    const weekStart = (() => {
-      const d = new Date(); const day = d.getDay()
-      d.setDate(d.getDate() - day + (day === 0 ? -6 : 1))
-      return d.toISOString().split('T')[0]
-    })()
-    supabase.from('tasks').select('*, project:projects(id, name)').gte('task_date', weekStart)
-      .then(({ data }) => { if (data) setTasks(data) })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     const channel = supabase
       .channel('workload-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
-        setTasks(prev => {
-          if (payload.eventType === 'INSERT') { showToast('📋 New task added'); return [...prev, payload.new as Task] }
-          if (payload.eventType === 'UPDATE') return prev.map(t => t.id === (payload.new as Task).id ? payload.new as Task : t)
-          if (payload.eventType === 'DELETE') return prev.filter(t => t.id !== (payload.old as Task).id)
-          return prev
-        })
+        if (payload.eventType === 'INSERT') { showToast('📋 New task added'); mutateTasks(prev => [...(prev ?? []), payload.new as Task], false) }
+        else if (payload.eventType === 'UPDATE') mutateTasks(prev => (prev ?? []).map(t => t.id === (payload.new as Task).id ? payload.new as Task : t), false)
+        else if (payload.eventType === 'DELETE') mutateTasks(prev => (prev ?? []).filter(t => t.id !== (payload.old as Task).id), false)
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, payload => {
-        setProfiles(prev => [...prev, payload.new as Profile].sort((a, b) => a.full_name.localeCompare(b.full_name)))
+        mutateProfiles(prev => [...(prev ?? []), payload.new as Profile].sort((a, b) => a.full_name.localeCompare(b.full_name)), false)
         showToast('👋 New team member joined')
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, payload => {
-        setProfiles(prev => prev.map(p => p.id === (payload.new as Profile).id ? { ...p, ...payload.new as Profile } : p))
+        mutateProfiles(prev => (prev ?? []).map(p => p.id === (payload.new as Profile).id ? { ...p, ...payload.new as Profile } : p), false)
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'developer_roles' }, async () => {
-        const { data } = await supabase.from('developer_roles').select('*, project:projects(id, name)')
-        if (data) setRoles(data)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'developer_roles' }, () => {
+        mutateRoles()
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }

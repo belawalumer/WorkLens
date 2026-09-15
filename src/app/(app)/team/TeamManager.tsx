@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import useSWR from 'swr'
 import { Profile, Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
 import { createUser, updateUserRole, deleteUser, resetUserPassword, updateUserProfile } from '@/app/actions/users'
 import { createClient } from '@/lib/supabase/client'
@@ -52,15 +53,18 @@ interface ResetState { userId: string; password: string; applied: boolean; apply
 interface EditProfileState { userId: string; fullName: string; email: string; saving: boolean }
 
 export default function TeamManager({ members: init, currentUserId, currentUserRole }: Props) {
-  const [members, setMembers] = useState(init)
   const supabase = createClient()
 
-  useEffect(() => {
-    supabase.from('profiles')
-      .select('id, full_name, email, role, created_at, user_status, status_from, status_until')
-      .order('full_name')
-      .then(({ data }) => { if (data) setMembers(data as Profile[]) })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const { data: members = init, mutate: mutateMembers } = useSWR<Profile[]>(
+    'profiles',
+    async () => {
+      const { data } = await supabase.from('profiles')
+        .select('id, full_name, email, role, created_at, user_status, status_from, status_until')
+        .order('full_name')
+      return (data ?? []) as Profile[]
+    },
+    { fallbackData: init, revalidateOnFocus: true },
+  )
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<AddForm>(EMPTY_FORM)
   const [generatedPassword, setGeneratedPassword] = useState('')
@@ -99,8 +103,8 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     setSubmitting(true)
     try {
       await createUser({ ...form, password: generatedPassword })
-      setMembers(prev => [...prev, { id: crypto.randomUUID(), full_name: form.fullName, email: form.email, role: form.role }]
-        .sort((a, b) => a.full_name.localeCompare(b.full_name)))
+      mutateMembers(prev => [...(prev ?? []), { id: crypto.randomUUID(), full_name: form.fullName, email: form.email, role: form.role }]
+        .sort((a, b) => a.full_name.localeCompare(b.full_name)), false)
       setCreatedPassword(generatedPassword)
       setAdding(false)
       setForm(EMPTY_FORM)
@@ -114,7 +118,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
   async function handleRoleChange(userId: string) {
     try {
       await updateUserRole(userId, pendingRole)
-      setMembers(prev => prev.map(m => m.id === userId ? { ...m, role: pendingRole } : m))
+      mutateMembers(prev => (prev ?? []).map(m => m.id === userId ? { ...m, role: pendingRole } : m), false)
       setEditingRoleId(null)
     } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed') }
   }
@@ -123,7 +127,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     if (!confirm(`Remove ${name} from the team? This cannot be undone.`)) return
     try {
       await deleteUser(userId)
-      setMembers(prev => prev.filter(m => m.id !== userId))
+      mutateMembers(prev => (prev ?? []).filter(m => m.id !== userId), false)
     } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed') }
   }
 
@@ -145,8 +149,8 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     setEditProfile(s => s ? { ...s, saving: true } : null)
     try {
       await updateUserProfile(editProfile.userId, { fullName: editProfile.fullName, email: editProfile.email })
-      setMembers(prev => prev.map(m => m.id === editProfile.userId
-        ? { ...m, full_name: editProfile.fullName, email: editProfile.email } : m))
+      mutateMembers(prev => (prev ?? []).map(m => m.id === editProfile.userId
+        ? { ...m, full_name: editProfile.fullName, email: editProfile.email } : m), false)
       setEditProfile(null)
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed')
