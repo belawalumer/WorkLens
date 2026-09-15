@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Profile, Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
 import { createUser, updateUserRole, deleteUser, resetUserPassword, updateUserProfile } from '@/app/actions/users'
+import { createClient } from '@/lib/supabase/client'
 
 interface Props {
   members: Profile[]
@@ -52,6 +53,14 @@ interface EditProfileState { userId: string; fullName: string; email: string; sa
 
 export default function TeamManager({ members: init, currentUserId, currentUserRole }: Props) {
   const [members, setMembers] = useState(init)
+  const supabase = createClient()
+
+  useEffect(() => {
+    supabase.from('profiles')
+      .select('id, full_name, email, role, created_at, user_status, status_from, status_until')
+      .order('full_name')
+      .then(({ data }) => { if (data) setMembers(data as Profile[]) })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<AddForm>(EMPTY_FORM)
   const [generatedPassword, setGeneratedPassword] = useState('')
