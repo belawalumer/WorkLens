@@ -47,7 +47,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
     <div className={`bg-white rounded-2xl border border-slate-200 border-t-4 flex flex-col transition-opacity ${topBorder} ${isUnavailable ? 'opacity-60' : ''}`}>
 
       {/* ── Header ───────────────────────────────────────────── */}
-      <div className="px-4 pt-4 pb-3 flex items-start gap-3">
+      <div className="px-4 pt-4 pb-3 flex items-start gap-3 min-h-[96px]">
         {/* Avatar + status badge */}
         <div className="relative shrink-0 group/status">
           <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold ${

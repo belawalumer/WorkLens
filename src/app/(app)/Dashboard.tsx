@@ -29,7 +29,7 @@ const STATUS_SOLID: Record<WorkloadStatus, string> = {
   overloaded: '#dc2626',
   full:        '#16a34a',
   underloaded: '#ca8a04',
-  available:   '#2563eb',
+  available:   '#0078b7',
 }
 
 // Status → light color (remaining/unfinished portion)
@@ -37,7 +37,7 @@ const STATUS_LIGHT: Record<WorkloadStatus, string> = {
   overloaded: '#fca5a5',
   full:        '#86efac',
   underloaded: '#fde047',
-  available:   '#93c5fd',
+  available:   '#339dd7',
 }
 
 function buildDeveloperData(
@@ -152,7 +152,7 @@ const DONUT_STATUS = [
   { key: 'overloaded',  label: 'Overloaded',  color: '#dc2626' },
   { key: 'full',        label: 'Full Load',   color: '#16a34a' },
   { key: 'underloaded', label: 'Underloaded', color: '#ca8a04' },
-  { key: 'available',   label: 'Available',   color: '#2563eb' },
+  { key: 'available',   label: 'Available',   color: '#0078b7' },
 ] as const
 
 // ─── Main component ────────────────────────────────────────────────────────────
@@ -370,18 +370,6 @@ export default function Dashboard({
                         <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null
-                        const item = payload[0]
-                        return (
-                          <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xl text-xs">
-                            <p className="font-semibold text-slate-700">{item.payload?.label ?? item.name}</p>
-                            <p className="text-slate-500">{String(item.value)} member{Number(item.value) !== 1 ? 's' : ''}</p>
-                          </div>
-                        )
-                      }}
-                    />
                   </PieChart>
                 </ResponsiveContainer>
                 {/* Center label */}
