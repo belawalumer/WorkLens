@@ -136,11 +136,6 @@ export default function NotificationBell({ userRole, userId }: { userRole: Role;
     await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false)
   }
 
-  async function clearAll() {
-    setNotifs([])
-    await supabase.from('notifications').delete().eq('user_id', userId)
-  }
-
   if (userRole === 'hr_admin') return null
 
   return (
@@ -171,7 +166,7 @@ export default function NotificationBell({ userRole, userId }: { userRole: Role;
             <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
           </svg>
           {unread > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+            <span className="absolute top-1 right-1 w-4 h-4 bg-brand-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
               {unread > 9 ? '9+' : unread}
             </span>
           )}
@@ -210,13 +205,6 @@ export default function NotificationBell({ userRole, userId }: { userRole: Role;
               )}
             </div>
 
-            {notifs.length > 0 && (
-              <div className="border-t border-slate-100 px-4 py-2">
-                <button onClick={clearAll} className="text-xs text-slate-400 hover:text-slate-600 w-full text-center">
-                  Clear all
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>

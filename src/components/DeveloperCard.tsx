@@ -1,6 +1,8 @@
 'use client'
 
 import { DeveloperWithData, Role, ROLE_LABELS } from '@/types'
+
+const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
 import WorkloadBadge from './WorkloadBadge'
 import Link from 'next/link'
 
@@ -61,8 +63,8 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
         {/* Progress bar */}
         <div>
           <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-            <span className="font-medium">{dev.todayHours.toFixed(1)}h planned</span>
-            <span>{dev.completedHours.toFixed(1)}h done</span>
+            <span className="font-medium">{fmt(dev.todayHours)}h planned</span>
+            <span>{fmt(dev.completedHours)}h done</span>
           </div>
           <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
             <div
@@ -76,9 +78,9 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
             />
           </div>
           <div className="flex justify-between text-xs mt-1.5">
-            <span className="text-slate-400">{dev.remainingHours.toFixed(1)}h left</span>
+            <span className="text-slate-400">{fmt(dev.remainingHours)}h left</span>
             <span className={`font-semibold ${freeHours > 2 ? 'text-brand-600' : 'text-slate-400'}`}>
-              {freeHours.toFixed(1)}h free
+              {fmt(freeHours)}h free
             </span>
           </div>
         </div>

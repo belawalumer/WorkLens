@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role } from '@/types'
 import DeveloperCard from '@/components/DeveloperCard'
 
+const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
+
 interface Props {
   profiles: Profile[]
   roles: DeveloperRole[]
@@ -122,7 +124,7 @@ function WorkloadTooltip({ active, payload }: { active?: boolean; payload?: Arra
         </div>
         <div className="flex justify-between gap-4 pt-1 border-t border-slate-100 mt-1">
           <span>Free capacity</span>
-          <span className="font-semibold text-blue-600">{Math.max(0, 8 - d.planned).toFixed(1)}h</span>
+          <span className="font-semibold text-blue-600">{fmt(Math.max(0, 8 - d.planned))}h</span>
         </div>
       </div>
     </div>
@@ -246,13 +248,13 @@ export default function Dashboard({
         <StatCard label="Team Members" value={developers.length} sub="visible to you" />
         <StatCard
           label="Avg Load Today"
-          value={`${avgLoad.toFixed(1)}h`}
-          sub={`${totalPlanned.toFixed(1)}h total planned`}
+          value={`${fmt(avgLoad)}h`}
+          sub={`${fmt(totalPlanned)}h total planned`}
           accent={avgLoad > 8 ? 'red' : avgLoad >= 6 ? 'green' : 'amber'}
         />
         <StatCard
           label="Free Capacity"
-          value={`${totalFreeCapacity.toFixed(1)}h`}
+          value={`${fmt(totalFreeCapacity)}h`}
           sub={`across ${availableCount} developer${availableCount !== 1 ? 's' : ''}`}
           accent="blue"
         />

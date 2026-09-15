@@ -27,6 +27,9 @@ const DAY_LABEL = (date: string) =>
     ? 'Today'
     : new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 
+// Show integer when whole, one decimal otherwise
+const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
+
 interface Props {
   initialTasks: Task[]
   userId: string
@@ -47,6 +50,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
   const [form, setForm] = useState({ title: '', estimated_hours: '1', task_date: TODAY })
   const [saving, setSaving] = useState(false)
   const [estimateEdit, setEstimateEdit] = useState<EstimateEdit | null>(null)
+  const [editingTitle, setEditingTitle] = useState<{ taskId: string; title: string } | null>(null)
   const [activeDay, setActiveDay] = useState(TODAY)
   const supabase = createClient()
 
@@ -91,6 +95,14 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     await supabase.from('tasks').delete().eq('id', id)
   }
 
+  async function saveTitleEdit(taskId: string, newTitle: string) {
+    const trimmed = newTitle.trim()
+    if (!trimmed) { setEditingTitle(null); return }
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title: trimmed } : t))
+    setEditingTitle(null)
+    await supabase.from('tasks').update({ title: trimmed }).eq('id', taskId)
+  }
+
   function openEstimateEdit(task: Task) {
     setEstimateEdit({ taskId: task.id, originalHours: task.estimated_hours, hours: String(task.estimated_hours), reason: '', reasonError: false })
   }
@@ -130,13 +142,13 @@ export default function MyTasks({ initialTasks, userId }: Props) {
           <h1 className="text-xl font-bold text-slate-900">My Tasks</h1>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
-              📅 {totalToday.toFixed(1)}h planned
+              📅 {fmt(totalToday)}h planned
             </span>
             <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">
-              ✅ {doneToday.toFixed(1)}h done
+              ✅ {fmt(doneToday)}h done
             </span>
             <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${freeToday > 2 ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>
-              🕐 {freeToday.toFixed(1)}h free
+              🕐 {fmt(freeToday)}h free
             </span>
           </div>
         </div>
@@ -224,7 +236,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                 <h2 className="text-sm font-bold text-slate-700">{DAY_LABEL(date)}</h2>
                 {dayHours > 0 && (
                   <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <span>{doneHours.toFixed(1)}h / {dayHours.toFixed(1)}h</span>
+                    <span>{fmt(doneHours)}h / {fmt(dayHours)}h</span>
                     <div className="w-24 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                       <div className="h-full bg-brand-500 rounded-full" style={{ width: `${Math.min(100, (doneHours / dayHours) * 100)}%` }} />
                     </div>
@@ -246,6 +258,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                 {dayTasks.map(task => (
                   <div key={task.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
                     <div className="flex items-center gap-3 px-4 py-3.5">
+                      {/* Checkbox */}
                       <button onClick={() => toggleDone(task)}
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
                           task.completed
@@ -255,15 +268,39 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                         {task.completed && <span className="text-[10px] font-bold">✓</span>}
                       </button>
 
+                      {/* Title — click to edit */}
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium leading-snug ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                          {task.title}
-                        </p>
+                        {editingTitle?.taskId === task.id ? (
+                          <input
+                            autoFocus
+                            type="text"
+                            value={editingTitle.title}
+                            onChange={e => setEditingTitle(p => p ? { ...p, title: e.target.value } : null)}
+                            onBlur={() => saveTitleEdit(task.id, editingTitle.title)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') { e.preventDefault(); saveTitleEdit(task.id, editingTitle.title) }
+                              if (e.key === 'Escape') setEditingTitle(null)
+                            }}
+                            className="w-full text-sm font-medium text-slate-800 bg-transparent border-b border-brand-400 focus:outline-none pb-0.5"
+                          />
+                        ) : (
+                          <p
+                            onClick={() => !task.completed && setEditingTitle({ taskId: task.id, title: task.title })}
+                            className={`text-sm font-medium leading-snug ${
+                              task.completed
+                                ? 'line-through text-slate-400 cursor-default'
+                                : 'text-slate-800 cursor-text hover:text-brand-700'
+                            }`}
+                          >
+                            {task.title}
+                          </p>
+                        )}
                         {task.estimate_change_reason && (
                           <span className="text-[11px] text-amber-600 mt-0.5 block">✏️ {task.estimate_change_reason}</span>
                         )}
                       </div>
 
+                      {/* Hours button → opens estimate edit */}
                       <button
                         onClick={() => estimateEdit?.taskId === task.id ? setEstimateEdit(null) : openEstimateEdit(task)}
                         className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors shrink-0 ${
@@ -271,9 +308,10 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                             ? 'bg-brand-100 text-brand-700'
                             : 'bg-slate-100 text-slate-600 hover:bg-brand-50 hover:text-brand-700'
                         }`}>
-                        {task.estimated_hours}h
+                        {fmt(task.estimated_hours)}h
                       </button>
 
+                      {/* Delete */}
                       <button onClick={() => deleteTask(task.id)}
                         className="text-slate-300 hover:text-red-500 transition-colors shrink-0 px-1">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -282,6 +320,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                       </button>
                     </div>
 
+                    {/* Estimate edit panel */}
                     {estimateEdit?.taskId === task.id && (
                       <form onSubmit={saveEstimate} className="border-t border-slate-100 bg-slate-50 px-4 py-3 space-y-2.5">
                         <div className="flex items-center gap-2">
