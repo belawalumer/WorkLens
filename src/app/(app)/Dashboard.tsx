@@ -175,6 +175,17 @@ export default function Dashboard({
   }, [])
 
   useEffect(() => {
+    // Fresh fetch on mount to catch tasks deleted/added while navigating
+    const weekStart = (() => {
+      const d = new Date(); const day = d.getDay()
+      d.setDate(d.getDate() - day + (day === 0 ? -6 : 1))
+      return d.toISOString().split('T')[0]
+    })()
+    supabase.from('tasks').select('*, project:projects(id, name)').gte('task_date', weekStart)
+      .then(({ data }) => { if (data) setTasks(data) })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     const channel = supabase
       .channel('workload-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
