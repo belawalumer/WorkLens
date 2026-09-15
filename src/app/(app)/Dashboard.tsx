@@ -77,13 +77,14 @@ function StatCard({
   label: string
   value: string | number
   sub?: string
-  accent?: 'blue' | 'red' | 'green' | 'amber'
+  accent?: 'blue' | 'red' | 'green' | 'amber' | 'purple'
   tooltip?: { name: string; value: string }[]
 }) {
-  const border = accent === 'blue' ? 'border-l-blue-400'
-    : accent === 'red'   ? 'border-l-red-400'
-    : accent === 'green' ? 'border-l-green-400'
-    : accent === 'amber' ? 'border-l-amber-400'
+  const border = accent === 'blue'   ? 'border-l-blue-400'
+    : accent === 'red'    ? 'border-l-red-400'
+    : accent === 'green'  ? 'border-l-green-400'
+    : accent === 'amber'  ? 'border-l-amber-400'
+    : accent === 'purple' ? 'border-l-purple-400'
     : 'border-l-slate-200'
 
   return (
@@ -243,8 +244,16 @@ export default function Dashboard({
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Team Dashboard</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <p className="text-sm text-slate-400">
+            {(() => {
+              const h = parseInt(new Date().toLocaleString('en-US', { timeZone: 'Asia/Karachi', hour: 'numeric', hour12: false }))
+              const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'
+              const firstName = profiles.find(p => p.id === currentUserId)?.full_name?.split(' ')[0] ?? ''
+              return `${greeting}, ${firstName} 👋`
+            })()}
+          </p>
+          <h1 className="text-xl font-bold text-slate-900 mt-0.5">Team Dashboard</h1>
+          <p className="text-xs text-slate-400 mt-0.5">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
@@ -268,12 +277,12 @@ export default function Dashboard({
 
       {/* ── Stat cards ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Team Members" value={developers.length} />
+        <StatCard label="Team Members" value={developers.length} accent="purple" />
         <StatCard
           label="Avg Load Today"
           value={`${fmt(avgLoad)}h`}
           sub={`${fmt(totalPlanned)}h total planned`}
-          accent={avgLoad > 8 ? 'red' : avgLoad >= 6 ? 'green' : 'amber'}
+          accent="amber"
           tooltip={developers.map(d => ({ name: d.full_name, value: `${fmt(d.todayHours)}h planned` }))}
         />
         <StatCard
@@ -287,7 +296,7 @@ export default function Dashboard({
           label="Overloaded"
           value={overloadedCount}
           sub={overloadedCount === 0 ? 'All within capacity ✓' : 'Need attention'}
-          accent={overloadedCount > 0 ? 'red' : 'green'}
+          accent="red"
         />
       </div>
 
