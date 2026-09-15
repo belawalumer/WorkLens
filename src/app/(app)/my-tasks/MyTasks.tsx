@@ -28,6 +28,14 @@ interface Props {
   userId: string
 }
 
+interface EstimateEdit {
+  taskId: string
+  originalHours: number
+  hours: string
+  reason: string
+  reasonError: boolean
+}
+
 export default function MyTasks({ initialTasks, projects, userId }: Props) {
   const [tasks, setTasks] = useState(initialTasks)
   const [view, setView] = useState<'today' | 'week'>('today')
@@ -37,6 +45,7 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
   const [addProject, setAddProject] = useState('')
   const [addingProject, setAddingProject] = useState(false)
   const [projectList, setProjectList] = useState(projects)
+  const [estimateEdit, setEstimateEdit] = useState<EstimateEdit | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -90,8 +99,30 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
     setAddingProject(false)
   }
 
-  const visibleDates = view === 'today' ? [TODAY] : WEEKDAYS
+  function openEstimateEdit(task: Task) {
+    setEstimateEdit({ taskId: task.id, originalHours: task.estimated_hours, hours: String(task.estimated_hours), reason: '', reasonError: false })
+  }
 
+  async function saveEstimate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!estimateEdit) return
+    const newHours = parseFloat(estimateEdit.hours)
+    if (isNaN(newHours) || newHours <= 0) return
+
+    if (newHours !== estimateEdit.originalHours && !estimateEdit.reason.trim()) {
+      setEstimateEdit(prev => prev ? { ...prev, reasonError: true } : null)
+      return
+    }
+
+    await supabase.from('tasks').update({
+      estimated_hours: newHours,
+      ...(newHours !== estimateEdit.originalHours ? { estimate_change_reason: estimateEdit.reason.trim() } : {}),
+    }).eq('id', estimateEdit.taskId)
+
+    setEstimateEdit(null)
+  }
+
+  const visibleDates = view === 'today' ? [TODAY] : WEEKDAYS
   const totalToday = tasks.filter(t => t.task_date === TODAY).reduce((s, t) => s + t.estimated_hours, 0)
   const doneToday = tasks.filter(t => t.task_date === TODAY && t.completed).reduce((s, t) => s + t.estimated_hours, 0)
 
@@ -152,11 +183,8 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
               {addingProject ? (
                 <form onSubmit={createProject} className="flex gap-1 flex-1">
                   <input
-                    autoFocus
-                    type="text"
-                    placeholder="Project name"
-                    value={addProject}
-                    onChange={e => setAddProject(e.target.value)}
+                    autoFocus type="text" placeholder="Project name"
+                    value={addProject} onChange={e => setAddProject(e.target.value)}
                     className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
                   />
                   <button type="submit" className="px-2 py-2 bg-slate-900 text-white rounded-lg text-xs">✓</button>
@@ -164,11 +192,8 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
                 </form>
               ) : (
                 <>
-                  <select
-                    value={form.project_id}
-                    onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  >
+                  <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
+                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400">
                     <option value="">No project</option>
                     {projectList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
@@ -208,28 +233,88 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
             ) : (
               <div className="space-y-2">
                 {dayTasks.map(task => (
-                  <div key={task.id} className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 group">
-                    <button
-                      onClick={() => toggleDone(task)}
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${task.completed ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-slate-500'}`}
-                    >
-                      {task.completed && <span className="text-xs">✓</span>}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                        {task.title}
-                      </p>
-                      {task.project && (
-                        <p className="text-xs text-slate-400">{task.project.name}</p>
-                      )}
+                  <div key={task.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden group">
+                    {/* Task row */}
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <button
+                        onClick={() => toggleDone(task)}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${task.completed ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-slate-500'}`}
+                      >
+                        {task.completed && <span className="text-xs">✓</span>}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                          {task.title}
+                        </p>
+                        {task.project && <p className="text-xs text-slate-400">{task.project.name}</p>}
+                        {task.estimate_change_reason && (
+                          <p className="text-xs text-amber-600 mt-0.5">
+                            ✏️ Changed: {task.estimate_change_reason}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => estimateEdit?.taskId === task.id ? setEstimateEdit(null) : openEstimateEdit(task)}
+                        title="Edit estimate"
+                        className={`text-sm shrink-0 px-2 py-0.5 rounded transition-colors ${estimateEdit?.taskId === task.id ? 'bg-slate-200 text-slate-800 font-semibold' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
+                      >
+                        {task.estimated_hours}h
+                      </button>
+                      <button
+                        onClick={() => deleteTask(task.id)}
+                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all text-sm shrink-0"
+                      >
+                        ✕
+                      </button>
                     </div>
-                    <span className="text-sm text-slate-500 shrink-0">{task.estimated_hours}h</span>
-                    <button
-                      onClick={() => deleteTask(task.id)}
-                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all text-sm"
-                    >
-                      ✕
-                    </button>
+
+                    {/* Inline estimate edit panel */}
+                    {estimateEdit?.taskId === task.id && (
+                      <form onSubmit={saveEstimate} className="border-t border-slate-100 px-4 py-3 bg-slate-50 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-medium text-slate-600 shrink-0">New estimate</label>
+                          <input
+                            autoFocus
+                            type="number" min="0.5" max="24" step="0.5"
+                            value={estimateEdit.hours}
+                            onChange={e => setEstimateEdit(prev => prev ? { ...prev, hours: e.target.value, reasonError: false } : null)}
+                            className="w-20 px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                          />
+                          <span className="text-xs text-slate-400">hours</span>
+                        </div>
+
+                        {/* Reason box — only required when hours actually change */}
+                        {parseFloat(estimateEdit.hours) !== estimateEdit.originalHours && (
+                          <div>
+                            <label className="text-xs font-medium text-slate-600 block mb-1">
+                              Reason for change <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                              autoFocus
+                              rows={2}
+                              placeholder="Why are you changing the estimate?"
+                              value={estimateEdit.reason}
+                              onChange={e => setEstimateEdit(prev => prev ? { ...prev, reason: e.target.value, reasonError: false } : null)}
+                              className={`w-full px-2 py-1.5 border rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-400 ${estimateEdit.reasonError ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+                            />
+                            {estimateEdit.reasonError && (
+                              <p className="text-xs text-red-500 mt-0.5">Reason is required when changing an estimate.</p>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex gap-2">
+                          <button type="submit"
+                            className="px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded hover:bg-slate-700 transition-colors">
+                            Save
+                          </button>
+                          <button type="button" onClick={() => setEstimateEdit(null)}
+                            className="px-3 py-1 border border-slate-300 text-xs rounded hover:bg-white transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
                   </div>
                 ))}
               </div>

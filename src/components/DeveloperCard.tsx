@@ -1,17 +1,19 @@
 'use client'
 
-import { DeveloperWithData } from '@/types'
+import { DeveloperWithData, Role, ROLE_LABELS } from '@/types'
 import WorkloadBadge from './WorkloadBadge'
 import Link from 'next/link'
 
 interface Props {
   dev: DeveloperWithData
   isMe: boolean
+  viewerRole: Role
 }
 
-export default function DeveloperCard({ dev, isMe }: Props) {
+export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
   const primaryRole = dev.roles[0]
   const freeHoursDisplay = Math.max(0, dev.freeHours).toFixed(1)
+  const showRoleBadge = viewerRole !== 'developer' && dev.role !== 'developer'
 
   return (
     <div className={`bg-white rounded-2xl border shadow-sm p-5 flex flex-col gap-4 transition-shadow hover:shadow-md ${isMe ? 'border-slate-400 ring-1 ring-slate-300' : 'border-slate-200'}`}>
@@ -23,7 +25,14 @@ export default function DeveloperCard({ dev, isMe }: Props) {
               {dev.full_name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-slate-900 truncate">{dev.full_name}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="font-semibold text-slate-900 truncate">{dev.full_name}</p>
+                {showRoleBadge && (
+                  <span className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">
+                    {ROLE_LABELS[dev.role]}
+                  </span>
+                )}
+              </div>
               {primaryRole && (
                 <p className="text-xs text-slate-500 truncate">
                   {primaryRole.title} — {primaryRole.project?.name}
@@ -56,7 +65,7 @@ export default function DeveloperCard({ dev, isMe }: Props) {
       </div>
 
       {/* Today's tasks preview */}
-      {dev.tasks.length > 0 && (
+      {dev.tasks.length > 0 ? (
         <div className="space-y-1.5">
           {dev.tasks.slice(0, 3).map(task => (
             <div key={task.id} className="flex items-center gap-2 text-sm">
@@ -71,13 +80,10 @@ export default function DeveloperCard({ dev, isMe }: Props) {
             <p className="text-xs text-slate-400 pl-4">+{dev.tasks.length - 3} more</p>
           )}
         </div>
-      )}
-
-      {dev.tasks.length === 0 && (
+      ) : (
         <p className="text-sm text-slate-400 italic">No tasks for today</p>
       )}
 
-      {/* Footer */}
       {isMe && (
         <Link
           href="/my-tasks"

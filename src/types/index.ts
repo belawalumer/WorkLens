@@ -1,9 +1,17 @@
+export type Role = 'super_admin' | 'hr_admin' | 'developer'
 export type WorkloadStatus = 'overloaded' | 'full' | 'underloaded' | 'available'
+
+export const ROLE_LABELS: Record<Role, string> = {
+  super_admin: 'Super Admin',
+  hr_admin: 'HR Admin',
+  developer: 'Developer',
+}
 
 export interface Profile {
   id: string
   full_name: string
   email: string
+  role: Role
 }
 
 export interface Project {
@@ -27,6 +35,7 @@ export interface Task {
   estimated_hours: number
   completed: boolean
   task_date: string
+  estimate_change_reason: string | null
   project?: Project
 }
 
