@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { DeveloperWithData, Role, ROLE_LABELS, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, STATUS_CONFIG, formatStatusSub } from '@/types'
 import Link from 'next/link'
 
@@ -36,6 +37,7 @@ const BAR_BG: Record<string, string> = {
 }
 
 export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
+  const [expanded, setExpanded] = useState(false)
   const primaryRole    = dev.roles[0]
   const showRoleBadge  = viewerRole !== 'developer' && dev.role !== 'developer'
   const isUnavailable  = UNAVAILABLE_STATUSES.includes((dev.user_status ?? 'active') as UserStatus)
@@ -139,7 +141,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
       <div className="px-4 py-3 border-t border-slate-100 flex-1 space-y-1.5">
         {dev.tasks.length > 0 ? (
           <>
-            {dev.tasks.slice(0, 3).map(task => (
+            {(expanded ? dev.tasks : dev.tasks.slice(0, 3)).map(task => (
               <div key={task.id} className="flex items-center gap-2">
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.completed ? 'bg-green-400' : 'bg-slate-300'}`} />
                 <span className={`flex-1 truncate text-xs ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
@@ -149,7 +151,10 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
               </div>
             ))}
             {dev.tasks.length > 3 && (
-              <p className="text-[11px] text-slate-400 pl-3.5">+{dev.tasks.length - 3} more</p>
+              <button onClick={() => setExpanded(e => !e)}
+                className="text-[11px] text-brand-500 hover:text-brand-700 pl-3.5 transition-colors">
+                {expanded ? 'Show less' : `+${dev.tasks.length - 3} more`}
+              </button>
             )}
           </>
         ) : (

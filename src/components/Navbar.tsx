@@ -27,6 +27,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
   const pathname = usePathname()
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [status, setStatus] = useState<UserStatus>(userStatus)
   const [from, setFrom] = useState(statusFrom ?? '')
   const [until, setUntil] = useState(statusUntil ?? '')
@@ -114,7 +115,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(o => !o)}
-              className="hidden sm:flex items-center gap-2 pl-2 ml-1 border-l border-slate-200 hover:bg-slate-50 rounded-lg px-2 py-1.5 transition-colors"
+              className="flex items-center gap-2 pl-2 ml-1 border-l border-slate-200 hover:bg-slate-50 rounded-lg px-2 py-1.5 transition-colors"
             >
               <div className="relative w-7 h-7 shrink-0">
                 <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center">
@@ -221,15 +222,42 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
             )}
           </div>
 
-          {/* Mobile sign out */}
+          {/* Hamburger — mobile only */}
           <button
-            onClick={signOut}
-            className="sm:hidden text-xs text-slate-500 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors font-medium"
+            onClick={() => setMobileMenuOpen(o => !o)}
+            className="sm:hidden flex items-center justify-center w-9 h-9 rounded-xl hover:bg-slate-100 transition-colors"
+            aria-label="Menu"
           >
-            Sign out
+            {mobileMenuOpen ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Mobile nav drawer */}
+      {mobileMenuOpen && (
+        <div className="sm:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-1">
+          {(['/', '/my-tasks', '/team'] as const).map((href, i) => {
+            const label = ['Dashboard', 'My Tasks', 'Team'][i]
+            const active = pathname === href
+            return (
+              <Link key={href} href={href} prefetch onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${active ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+                {label}
+              </Link>
+            )
+          })}
+          <div className="pt-2 border-t border-slate-100 mt-2">
+            <button onClick={signOut}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors font-medium">
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   )
 }
