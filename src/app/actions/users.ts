@@ -74,3 +74,17 @@ export async function deleteUser(userId: string) {
   await admin.auth.admin.deleteUser(userId)
   revalidatePath('/team')
 }
+
+export async function resetUserPassword(userId: string, newPassword: string) {
+  const myRole = await getMyRole()
+  if (!myRole || myRole === 'developer') throw new Error('Unauthorized')
+
+  if (myRole === 'hr_admin') {
+    const targetRole = await getTargetRole(userId)
+    if (targetRole !== 'developer') throw new Error('HR admins can only reset developer passwords')
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword })
+  if (error) throw error
+}

@@ -18,6 +18,14 @@ export default function ProfileClient({ profile, roles: initRoles, projects, use
   const [roles, setRoles] = useState(initRoles)
   const [newRole, setNewRole] = useState({ project_id: '', title: '' })
   const [addingRole, setAddingRole] = useState(false)
+
+  // Password change state
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [pwdError, setPwdError] = useState('')
+  const [pwdSaving, setPwdSaving] = useState(false)
+  const [pwdSaved, setPwdSaved] = useState(false)
+
   const supabase = createClient()
 
   async function saveProfile(e: React.FormEvent) {
@@ -27,6 +35,21 @@ export default function ProfileClient({ profile, roles: initRoles, projects, use
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  async function changePassword(e: React.FormEvent) {
+    e.preventDefault()
+    setPwdError('')
+    if (newPassword.length < 6) { setPwdError('Password must be at least 6 characters.'); return }
+    if (newPassword !== confirmPassword) { setPwdError('Passwords do not match.'); return }
+    setPwdSaving(true)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setPwdSaving(false)
+    if (error) { setPwdError(error.message); return }
+    setNewPassword('')
+    setConfirmPassword('')
+    setPwdSaved(true)
+    setTimeout(() => setPwdSaved(false), 3000)
   }
 
   async function addRole(e: React.FormEvent) {
@@ -73,6 +96,45 @@ export default function ProfileClient({ profile, roles: initRoles, projects, use
           <button type="submit" disabled={saving}
             className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-50 transition-colors">
             {saved ? '✓ Saved' : saving ? 'Saving...' : 'Save changes'}
+          </button>
+        </form>
+      </div>
+
+      {/* Change password */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6">
+        <h2 className="font-semibold text-slate-800 mb-4">Change Password</h2>
+        <form onSubmit={changePassword} className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">New password</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={e => { setNewPassword(e.target.value); setPwdError('') }}
+              placeholder="Min. 6 characters"
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm new password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={e => { setConfirmPassword(e.target.value); setPwdError('') }}
+              placeholder="Repeat new password"
+              required
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+            />
+          </div>
+          {pwdError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{pwdError}</p>
+          )}
+          {pwdSaved && (
+            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">✓ Password updated successfully.</p>
+          )}
+          <button type="submit" disabled={pwdSaving}
+            className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-50 transition-colors">
+            {pwdSaving ? 'Updating...' : 'Update password'}
           </button>
         </form>
       </div>
