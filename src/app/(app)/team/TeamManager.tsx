@@ -34,6 +34,11 @@ function canManage(viewerRole: Role, targetRole: Role, isSelf: boolean): boolean
   return false
 }
 
+const initials = (name: string) => {
+  const p = name.trim().split(/\s+/)
+  return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
+}
+
 function generatePassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#'
   return Array.from(crypto.getRandomValues(new Uint8Array(14))).map(b => chars[b % chars.length]).join('')
@@ -291,7 +296,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
                 {/* Avatar + name */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${AVATAR_BG[member.role]}`}>
-                    {member.full_name.charAt(0).toUpperCase()}
+                    {initials(member.full_name)}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">

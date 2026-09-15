@@ -5,6 +5,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useRef, useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Role, ROLE_LABELS } from '@/types'
+
+const initials = (name: string) => {
+  const p = name.trim().split(/\s+/)
+  return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
+}
 import NotificationBell from './NotificationBell'
 
 interface Props {
@@ -81,7 +86,7 @@ export default function Navbar({ userName, userRole, userId }: Props) {
               className="hidden sm:flex items-center gap-2 pl-2 ml-1 border-l border-slate-200 hover:bg-slate-50 rounded-lg px-2 py-1.5 transition-colors"
             >
               <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-                <span className="text-brand-700 text-xs font-bold">{userName.charAt(0).toUpperCase()}</span>
+                <span className="text-brand-700 text-xs font-bold">{initials(userName)}</span>
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-slate-800 leading-none">{userName}</p>

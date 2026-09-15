@@ -72,12 +72,13 @@ function buildDeveloperData(
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 function StatCard({
-  label, value, sub, accent,
+  label, value, sub, accent, tooltip,
 }: {
   label: string
   value: string | number
   sub?: string
   accent?: 'blue' | 'red' | 'green' | 'amber'
+  tooltip?: { name: string; value: string }[]
 }) {
   const border = accent === 'blue' ? 'border-l-blue-400'
     : accent === 'red'   ? 'border-l-red-400'
@@ -86,10 +87,26 @@ function StatCard({
     : 'border-l-slate-200'
 
   return (
-    <div className={`bg-white border border-slate-200 border-l-4 ${border} rounded-2xl px-5 py-4 shadow-sm`}>
+    <div className={`relative group bg-white border border-slate-200 border-l-4 ${border} rounded-2xl px-5 py-4 shadow-sm`}>
       <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">{label}</p>
       <p className="text-3xl font-bold text-slate-900 mt-1 tabular-nums">{value}</p>
-      {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+      {sub && (
+        <p className={`text-xs text-slate-400 mt-1 ${tooltip?.length ? 'underline decoration-dotted decoration-slate-300 underline-offset-2 cursor-default' : ''}`}>
+          {sub}
+        </p>
+      )}
+      {tooltip && tooltip.length > 0 && (
+        <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <div className="space-y-1">
+            {tooltip.map(t => (
+              <div key={t.name} className="flex items-center justify-between gap-3 text-xs">
+                <span className="text-slate-600 truncate">{t.name}</span>
+                <span className="font-semibold text-slate-800 shrink-0">{t.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -245,18 +262,20 @@ export default function Dashboard({
 
       {/* ── Stat cards ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Team Members" value={developers.length} sub="visible to you" />
+        <StatCard label="Team Members" value={developers.length} />
         <StatCard
           label="Avg Load Today"
           value={`${fmt(avgLoad)}h`}
           sub={`${fmt(totalPlanned)}h total planned`}
           accent={avgLoad > 8 ? 'red' : avgLoad >= 6 ? 'green' : 'amber'}
+          tooltip={developers.map(d => ({ name: d.full_name, value: `${fmt(d.todayHours)}h planned` }))}
         />
         <StatCard
           label="Free Capacity"
           value={`${fmt(totalFreeCapacity)}h`}
           sub={`across ${availableCount} developer${availableCount !== 1 ? 's' : ''}`}
           accent="blue"
+          tooltip={availableDevs.map(d => ({ name: d.full_name, value: `${fmt(Math.max(0, d.freeHours))}h free` }))}
         />
         <StatCard
           label="Overloaded"

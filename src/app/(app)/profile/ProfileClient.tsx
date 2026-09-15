@@ -9,6 +9,11 @@ interface Props {
   userId: string
 }
 
+const initials = (name: string) => {
+  const p = name.trim().split(/\s+/)
+  return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
+}
+
 const inputCls = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-colors bg-white'
 const disabledCls = 'w-full px-3 py-2.5 border border-slate-100 rounded-xl text-sm bg-slate-50 text-slate-400'
 
@@ -54,7 +59,7 @@ export default function ProfileClient({ profile, userId }: Props) {
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-brand-100 flex items-center justify-center shrink-0">
-          <span className="text-brand-700 text-xl font-black">{(profile?.full_name ?? 'U').charAt(0).toUpperCase()}</span>
+          <span className="text-brand-700 text-xl font-black">{initials(profile?.full_name ?? 'U')}</span>
         </div>
         <div>
           <h1 className="text-xl font-bold text-slate-900">{profile?.full_name ?? 'Profile'}</h1>

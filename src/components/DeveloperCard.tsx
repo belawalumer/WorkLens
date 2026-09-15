@@ -5,6 +5,10 @@ import WorkloadBadge from './WorkloadBadge'
 import Link from 'next/link'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
+const initials = (name: string) => {
+  const p = name.trim().split(/\s+/)
+  return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
+}
 
 interface Props {
   dev: DeveloperWithData
@@ -37,7 +41,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
               isMe ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
             }`}>
-              {dev.full_name.charAt(0).toUpperCase()}
+              {initials(dev.full_name)}
             </div>
 
             {/* Name + role badge on same row, project title below */}
