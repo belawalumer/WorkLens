@@ -412,7 +412,7 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* ── Developer cards ─────────────────────────────────────────────── */}
+      {/* ── Member cards ─────────────────────────────────────────────── */}
       <div>
         <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">
           {filter === 'all' ? 'All Members' : filter === 'available' ? 'Available Members' : 'Overloaded Members'}

@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  // const [fullName, setFullName] = useState('')
+  // const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -19,17 +19,17 @@ export default function LoginPage() {
     setLoading(true)
     const supabase = createClient()
     try {
-      if (mode === 'login') {
+      // if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName } },
-        })
-        if (error) throw error
-      }
+      // } else {
+      //   const { error } = await supabase.auth.signUp({
+      //     email,
+      //     password,
+      //     options: { data: { full_name: fullName } },
+      //   })
+      //   if (error) throw error
+      // }
       router.push('/')
       router.refresh()
     } catch (err: unknown) {
@@ -56,17 +56,18 @@ export default function LoginPage() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-7">
           <h2 className="text-base font-semibold text-slate-800 mb-5">
-            {mode === 'login' ? 'Sign in to your account' : 'Create your account'}
+            {/* {mode === 'login' ? 'Sign in to your account' : 'Create your account'} */}
+            Sign in to your account
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
+            {/* {mode === 'signup' && (
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Full name</label>
                 <input type="text" value={fullName} onChange={e => setFullName(e.target.value)}
                   required placeholder="Jane Smith" className={inputCls} />
               </div>
-            )}
+            )} */}
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
@@ -84,17 +85,18 @@ export default function LoginPage() {
 
             <button type="submit" disabled={loading}
               className="w-full py-2.5 px-4 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 disabled:opacity-50 transition-colors shadow-sm shadow-brand-200">
-              {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+              {/* {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'} */}
+              {loading ? 'Please wait…' : 'Sign in'}
             </button>
           </form>
 
-          <p className="text-center text-sm text-slate-500 mt-5">
+          {/* <p className="text-center text-sm text-slate-500 mt-5">
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
               className="text-brand-600 font-semibold hover:text-brand-800">
               {mode === 'login' ? 'Sign up' : 'Sign in'}
             </button>
-          </p>
+          </p> */}
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">Kodesinc · WorkLens</p>

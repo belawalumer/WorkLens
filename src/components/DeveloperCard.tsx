@@ -1,7 +1,6 @@
 'use client'
 
 import { DeveloperWithData, Role, ROLE_LABELS, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
-import WorkloadBadge from './WorkloadBadge'
 import Link from 'next/link'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
@@ -22,107 +21,133 @@ const ROLE_BADGE: Record<Role, string> = {
   developer:   '',
 }
 
+const TOP_BORDER: Record<string, string> = {
+  overloaded:  'border-t-red-500',
+  full:        'border-t-green-500',
+  underloaded: 'border-t-amber-400',
+  available:   'border-t-emerald-400',
+}
+
+const BAR_BG: Record<string, string> = {
+  overloaded:  'bg-red-500',
+  full:        'bg-green-500',
+  underloaded: 'bg-amber-400',
+  available:   'bg-emerald-400',
+}
+
 export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
-  const primaryRole = dev.roles[0]
-  const showRoleBadge = viewerRole !== 'developer' && dev.role !== 'developer'
-  const fillPct = Math.min(100, (dev.todayHours / 8) * 100)
-  const isUnavailable = UNAVAILABLE_STATUSES.includes((dev.user_status ?? 'active') as UserStatus)
-  const freeToday = Math.max(0, dev.freeHours)
+  const primaryRole    = dev.roles[0]
+  const showRoleBadge  = viewerRole !== 'developer' && dev.role !== 'developer'
+  const isUnavailable  = UNAVAILABLE_STATUSES.includes((dev.user_status ?? 'active') as UserStatus)
+  const freeToday      = Math.max(0, dev.freeHours)
+  const fillPct        = Math.min(100, (dev.todayHours / 8) * 100)
+  const topBorder      = isMe ? 'border-t-green-400' : isUnavailable ? 'border-t-slate-200' : (TOP_BORDER[dev.status] ?? 'border-t-slate-200')
 
   return (
-    <div className={`bg-white rounded-2xl border flex flex-col gap-4 transition-opacity ${
-      isMe ? 'border-green-300 ring-1 ring-green-200' : 'border-slate-200'
-    } ${isUnavailable ? 'opacity-60' : ''}`}>
-      <div className="px-5 pt-4 flex flex-col gap-4">
-        {/* Header */}
-        <div className="flex items-start gap-3 min-w-0">
-          {/* Avatar */}
-          <div className="relative shrink-0 group/status">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${
-              isMe ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
-            }`}>
-              {initials(dev.full_name)}
-            </div>
-            <span className="absolute -bottom-1 -right-1 flex items-center justify-center w-4 h-4 bg-white rounded-full text-[9px] leading-none shadow-sm ring-1 ring-slate-100">
-              {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].emoji}
-            </span>
-            <div className="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/status:opacity-100 transition-opacity z-20">
-              {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
-              {(() => {
-                const sub = formatStatusSub((dev.user_status ?? 'active') as UserStatus, dev.status_from, dev.status_until)
-                return sub ? ` · ${sub}` : ''
-              })()}
-            </div>
-          </div>
+    <div className={`bg-white rounded-2xl border border-slate-200 border-t-4 flex flex-col transition-opacity ${topBorder} ${isUnavailable ? 'opacity-60' : ''}`}>
 
-          {/* Name + role badge on same row, project title below */}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <p className="font-bold text-slate-900 text-sm leading-snug">{dev.full_name}</p>
-              {showRoleBadge && (
-                <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold ${ROLE_BADGE[dev.role]}`}>
-                  {ROLE_LABELS[dev.role]}
-                </span>
-              )}
-            </div>
-            {primaryRole && (
-              <span className="text-[11px] text-slate-400">{primaryRole.title}</span>
+      {/* ── Header ───────────────────────────────────────────── */}
+      <div className="px-4 pt-4 pb-3 flex items-start gap-3">
+        {/* Avatar + status badge */}
+        <div className="relative shrink-0 group/status">
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold ${
+            isMe ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+          }`}>
+            {initials(dev.full_name)}
+          </div>
+          <span className="absolute -bottom-1 -right-1 flex items-center justify-center w-4 h-4 bg-white rounded-full text-[9px] leading-none shadow-sm ring-1 ring-slate-100">
+            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].emoji}
+          </span>
+          <div className="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/status:opacity-100 transition-opacity z-20">
+            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
+            {(() => {
+              const sub = formatStatusSub((dev.user_status ?? 'active') as UserStatus, dev.status_from, dev.status_until)
+              return sub ? ` · ${sub}` : ''
+            })()}
+          </div>
+        </div>
+
+        {/* Name + role */}
+        <div className="flex-1 min-w-0 pt-0.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="font-bold text-slate-900 text-sm leading-snug">{dev.full_name}</p>
+            {isMe && <span className="text-[11px] text-brand-500 font-medium shrink-0">(you)</span>}
+            {showRoleBadge && (
+              <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold shrink-0 ${ROLE_BADGE[dev.role]}`}>
+                {ROLE_LABELS[dev.role]}
+              </span>
             )}
           </div>
+          <p className="text-[11px] text-slate-400 mt-0.5">{primaryRole?.title ?? <>&nbsp;</>}</p>
         </div>
+      </div>
 
-        {/* Progress bar — planned + free only */}
-        <div>
-          <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-            <span className="font-medium">{fmt(dev.todayHours)}h planned</span>
-            <span className={`font-semibold ${freeToday > 2 ? 'text-brand-600' : 'text-slate-400'}`}>
-              {fmt(freeToday)}h free
-            </span>
+      {/* ── Stats + bar (active devs) ─────────────────────────── */}
+      {!isUnavailable ? (
+        <>
+          <div className="grid grid-cols-3 divide-x divide-slate-100 border-t border-slate-100">
+            <div className="px-3 py-2.5 text-center">
+              <p className="text-base font-bold text-slate-800 tabular-nums leading-none">{fmt(dev.todayHours)}h</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">planned</p>
+            </div>
+            <div className="px-3 py-2.5 text-center">
+              <p className={`text-base font-bold tabular-nums leading-none ${freeToday > 2 ? 'text-brand-600' : 'text-slate-400'}`}>
+                {fmt(freeToday)}h
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">free today</p>
+            </div>
+            <div className="px-3 py-2.5 text-center">
+              <p className="text-base font-bold text-slate-800 tabular-nums leading-none">{dev.tasks.length}</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">tasks</p>
+            </div>
           </div>
-          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                dev.status === 'overloaded' ? 'bg-red-500'
-                : dev.status === 'full'      ? 'bg-green-500'
-                : dev.status === 'underloaded' ? 'bg-amber-400'
-                : 'bg-emerald-400'
-              }`}
-              style={{ width: `${fillPct}%` }}
-            />
+          <div className="px-4 pb-3">
+            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${BAR_BG[dev.status] ?? 'bg-slate-300'}`}
+                style={{ width: `${fillPct}%` }}
+              />
+            </div>
           </div>
+        </>
+      ) : (
+        <div className="px-4 py-3 border-t border-slate-100">
+          <p className="text-xs text-slate-500">
+            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].emoji}{' '}
+            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
+            {(() => {
+              const sub = formatStatusSub(dev.user_status as UserStatus, dev.status_from, dev.status_until)
+              return sub ? ` · ${sub}` : ''
+            })()}
+          </p>
         </div>
+      )}
 
-        {/* Task list */}
+      {/* ── Task list ─────────────────────────────────────────── */}
+      <div className="px-4 py-3 border-t border-slate-100 flex-1 space-y-1.5">
         {dev.tasks.length > 0 ? (
-          <div className="space-y-1.5">
+          <>
             {dev.tasks.slice(0, 3).map(task => (
-              <div key={task.id} className="flex items-center gap-2 text-sm">
+              <div key={task.id} className="flex items-center gap-2">
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.completed ? 'bg-green-400' : 'bg-slate-300'}`} />
                 <span className={`flex-1 truncate text-xs ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
                   {task.title}
                 </span>
-                <span className="text-[11px] text-slate-400 shrink-0 font-medium">{fmt(task.estimated_hours)}h</span>
+                <span className="text-[11px] text-slate-400 shrink-0 tabular-nums">{fmt(task.estimated_hours)}h</span>
               </div>
             ))}
             {dev.tasks.length > 3 && (
-              <p className="text-[11px] text-slate-400 pl-3">+{dev.tasks.length - 3} more tasks</p>
+              <p className="text-[11px] text-slate-400 pl-3.5">+{dev.tasks.length - 3} more</p>
             )}
-          </div>
+          </>
         ) : (
-          <p className="text-xs text-slate-400 italic">No tasks today</p>
+          <p className="text-xs text-slate-300 italic">No tasks today</p>
         )}
       </div>
 
-      {/* Footer: workload (active devs only) */}
-      {(!dev.user_status || dev.user_status === 'active') && (
-        <div className={`border-t border-slate-100 px-5 py-2.5 flex items-center gap-2 ${isMe ? '' : 'pb-3'}`}>
-          <WorkloadBadge status={dev.status} freeToday={freeToday} freeWeek={Math.max(0, 40 - dev.weeklyHours)} />
-        </div>
-      )}
-
-      {/* Footer: me link */}
+      {/* ── Me link ───────────────────────────────────────────── */}
       {isMe && (
-        <div className="px-5 pb-4">
+        <div className="px-4 pb-4 border-t border-slate-100 pt-3">
           <Link href="/my-tasks"
             className="block text-center text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-xl py-2 transition-colors">
             Manage my tasks →
