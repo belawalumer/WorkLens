@@ -25,19 +25,16 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
   return (
     <div className={`bg-white rounded-2xl border shadow-sm flex flex-col gap-4 overflow-hidden transition-shadow hover:shadow-md ${
       isMe
-        ? 'border-brand-300 ring-1 ring-brand-200'
+        ? 'border-green-300 ring-1 ring-green-200'
         : 'border-slate-200'
     }`}>
-      {/* Brand accent top bar */}
-      {isMe && <div className="h-0.5 bg-gradient-to-r from-brand-400 to-brand-600" />}
-
       <div className="px-5 pt-4 flex flex-col gap-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             {/* Avatar */}
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
-              isMe ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'
+              isMe ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
             }`}>
               {dev.full_name.charAt(0).toUpperCase()}
             </div>
@@ -73,7 +70,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
                 dev.status === 'overloaded' ? 'bg-red-500'
                 : dev.status === 'full' ? 'bg-green-500'
                 : dev.status === 'underloaded' ? 'bg-amber-400'
-                : 'bg-brand-500'
+                : 'bg-emerald-400'
               }`}
               style={{ width: `${fillPct}%` }}
             />
@@ -111,7 +108,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
       {isMe && (
         <div className="px-5 pb-4">
           <Link href="/my-tasks"
-            className="block text-center text-xs font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-xl py-2 transition-colors">
+            className="block text-center text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-xl py-2 transition-colors">
             Manage my tasks →
           </Link>
         </div>
