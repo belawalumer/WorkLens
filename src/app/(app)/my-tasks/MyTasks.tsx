@@ -55,6 +55,15 @@ export default function MyTasks({ initialTasks, userId }: Props) {
   const supabase = createClient()
 
   useEffect(() => {
+    // Fresh fetch on mount to catch tasks added/deleted while navigating
+    supabase.from('tasks').select('*, project:projects(id, name)')
+      .eq('developer_id', userId)
+      .order('task_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setTasks(data) })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     const channel = supabase
       .channel('my-tasks')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `developer_id=eq.${userId}` }, payload => {
