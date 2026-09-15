@@ -67,10 +67,11 @@ export default function MyTasks({ initialTasks, userId }: Props) {
   useEffect(() => {
     const channel = supabase
       .channel('my-tasks')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `developer_id=eq.${userId}` }, payload => {
-        if (payload.eventType === 'INSERT') mutateTasks(prev => [payload.new as Task, ...(prev ?? [])], false)
-        else if (payload.eventType === 'UPDATE') mutateTasks(prev => (prev ?? []).map(t => t.id === (payload.new as Task).id ? payload.new as Task : t), false)
-        else if (payload.eventType === 'DELETE') mutateTasks(prev => (prev ?? []).filter(t => t.id !== (payload.old as Task).id), false)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks', filter: `developer_id=eq.${userId}` }, payload => {
+        mutateTasks(prev => (prev ?? []).map(t => t.id === (payload.new as Task).id ? payload.new as Task : t), false)
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tasks', filter: `developer_id=eq.${userId}` }, payload => {
+        mutateTasks(prev => (prev ?? []).filter(t => t.id !== (payload.old as Task).id), false)
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
