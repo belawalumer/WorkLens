@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useRef, useState, useEffect } from 'react'
+import { mutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
 import { toast, queueToast } from '@/lib/toast'
@@ -52,6 +53,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
     setUntil(u ?? '')
     setPendingStatus(null)
     await supabase.from('profiles').update({ user_status: s, status_from: f, status_until: u }).eq('id', userId)
+    mutate('profiles') // push change into Dashboard + TeamManager SWR cache immediately
     toast.success(`Status set to ${USER_STATUS_CONFIG[s].label}`)
   }
 

@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { mutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Profile, ROLE_LABELS, Role, UserStatus, USER_STATUS_CONFIG } from '@/types'
+import { toast } from '@/lib/toast'
 
 interface Props {
   profile: Profile | null
@@ -34,9 +36,11 @@ export default function ProfileClient({ profile, userId }: Props) {
     e.preventDefault()
     setSaving(true)
     await supabase.from('profiles').update({ full_name: fullName }).eq('id', userId)
+    mutate('profiles') // invalidate shared SWR cache so Dashboard/TeamManager update immediately
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+    toast.success('Profile saved')
   }
 
   async function changePassword(e: React.FormEvent) {
@@ -47,11 +51,12 @@ export default function ProfileClient({ profile, userId }: Props) {
     setPwdSaving(true)
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     setPwdSaving(false)
-    if (error) { setPwdError(error.message); return }
+    if (error) { setPwdError(error.message); toast.error(error.message); return }
     setNewPassword('')
     setConfirmPassword('')
     setPwdSaved(true)
     setTimeout(() => setPwdSaved(false), 3000)
+    toast.success('Password updated')
   }
 
   return (
