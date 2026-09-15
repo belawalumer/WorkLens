@@ -257,8 +257,8 @@ export default function Dashboard({
         <div>
           <p className="text-sm text-slate-400">
             {(() => {
-              const h = parseInt(new Date().toLocaleString('en-US', { timeZone: 'Asia/Karachi', hour: 'numeric', hour12: false }))
-              const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'
+              const h = parseInt(new Date().toLocaleString('en-US', { timeZone: 'Asia/Karachi', hour: 'numeric', hour12: false })) % 24
+              const greeting = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'
               const firstName = profiles.find(p => p.id === currentUserId)?.full_name?.split(' ')[0] ?? ''
               return `${greeting}, ${firstName} 👋`
             })()}
