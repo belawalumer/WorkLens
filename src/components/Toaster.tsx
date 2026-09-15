@@ -6,9 +6,9 @@ import { TOAST_EVENT, ToastType } from '@/lib/toast'
 interface ToastItem { id: number; message: string; type: ToastType }
 
 const TYPE_STYLE: Record<ToastType, string> = {
-  success: 'bg-emerald-50 border border-emerald-200 text-emerald-900',
-  error:   'bg-red-50 border border-red-200 text-red-900',
-  info:    'bg-brand-50 border border-brand-200 text-brand-900',
+  success: 'bg-white border border-slate-200 text-slate-900 border-l-4 border-l-brand-600',
+  error:   'bg-white border border-slate-200 text-slate-900 border-l-4 border-l-slate-900',
+  info:    'bg-white border border-slate-200 text-slate-900 border-l-4 border-l-brand-400',
 }
 
 export default function Toaster() {
