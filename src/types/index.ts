@@ -57,9 +57,9 @@ export function getWorkloadStatus(hours: number): WorkloadStatus {
   return 'available'
 }
 
-export const STATUS_CONFIG: Record<WorkloadStatus, { label: string; emoji: string; bg: string; text: string; border: string }> = {
-  overloaded:  { label: 'Overloaded',  emoji: '🔴', bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200' },
-  full:        { label: 'Full Load',   emoji: '🟢', bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200' },
-  underloaded: { label: 'Underloaded', emoji: '🟡', bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
-  available:   { label: 'Available',   emoji: '🔵', bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200' },
+export const STATUS_CONFIG: Record<WorkloadStatus, { label: string; emoji: string; bg: string; text: string; border: string; solid: string }> = {
+  overloaded:  { label: 'Overloaded',  emoji: '🔴', bg: 'bg-red-50',     text: 'text-red-700',    border: 'border-red-200',    solid: '#dc2626' },
+  full:        { label: 'Full Load',   emoji: '🟢', bg: 'bg-green-50',   text: 'text-green-700',  border: 'border-green-200',  solid: '#16a34a' },
+  underloaded: { label: 'Underloaded', emoji: '🟡', bg: 'bg-amber-50',   text: 'text-amber-700',  border: 'border-amber-200',  solid: '#d97706' },
+  available:   { label: 'Available',   emoji: '🔵', bg: 'bg-brand-50',   text: 'text-brand-700',  border: 'border-brand-200',  solid: '#4f46e5' },
 }

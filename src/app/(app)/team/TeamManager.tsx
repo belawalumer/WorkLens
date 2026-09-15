@@ -11,14 +11,19 @@ interface Props {
 }
 
 const ROLE_COLORS: Record<Role, string> = {
+  super_admin: 'bg-purple-100 text-purple-700 border-purple-200',
+  hr_admin:    'bg-brand-100 text-brand-700 border-brand-200',
+  developer:   'bg-slate-100 text-slate-600 border-slate-200',
+}
+
+const AVATAR_BG: Record<Role, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
-  hr_admin: 'bg-blue-100 text-blue-700',
-  developer: 'bg-slate-100 text-slate-600',
+  hr_admin:    'bg-brand-100 text-brand-700',
+  developer:   'bg-slate-100 text-slate-600',
 }
 
 function assignableRoles(viewerRole: Role): Role[] {
   if (viewerRole === 'super_admin') return ['developer', 'hr_admin', 'super_admin']
-  if (viewerRole === 'hr_admin') return ['developer']
   return ['developer']
 }
 
@@ -31,47 +36,46 @@ function canManage(viewerRole: Role, targetRole: Role, isSelf: boolean): boolean
 
 function generatePassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#'
-  return Array.from(crypto.getRandomValues(new Uint8Array(14)))
-    .map(b => chars[b % chars.length])
-    .join('')
+  return Array.from(crypto.getRandomValues(new Uint8Array(14))).map(b => chars[b % chars.length]).join('')
 }
 
 type AddForm = { fullName: string; email: string; role: Role }
 const EMPTY_FORM: AddForm = { fullName: '', email: '', role: 'developer' }
 
-interface ResetState {
-  userId: string
-  password: string
-  applied: boolean
-  applying: boolean
-}
+interface ResetState { userId: string; password: string; applied: boolean; applying: boolean }
 
 export default function TeamManager({ members: init, currentUserId, currentUserRole }: Props) {
   const [members, setMembers] = useState(init)
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<AddForm>(EMPTY_FORM)
   const [generatedPassword, setGeneratedPassword] = useState('')
-  const [createdPassword, setCreatedPassword] = useState('')  // shown after creation
+  const [createdPassword, setCreatedPassword] = useState('')
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
   const [pendingRole, setPendingRole] = useState<Role>('developer')
   const [resetState, setResetState] = useState<ResetState | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+
+  const roles = assignableRoles(currentUserRole)
+
+  // Role counts
+  const counts: Record<Role, number> = { super_admin: 0, hr_admin: 0, developer: 0 }
+  members.forEach(m => counts[m.role]++)
 
   function openAddForm() {
-    const pwd = generatePassword()
-    setGeneratedPassword(pwd)
+    setGeneratedPassword(generatePassword())
     setForm(EMPTY_FORM)
     setFormError('')
     setCreatedPassword('')
     setAdding(true)
   }
 
-  function copyToClipboard(text: string) {
+  function copy(text: string, key: string) {
     navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopied(key)
+    setTimeout(() => setCopied(null), 2000)
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -80,12 +84,8 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     setSubmitting(true)
     try {
       await createUser({ ...form, password: generatedPassword })
-      setMembers(prev => [...prev, {
-        id: crypto.randomUUID(),
-        full_name: form.fullName,
-        email: form.email,
-        role: form.role,
-      }].sort((a, b) => a.full_name.localeCompare(b.full_name)))
+      setMembers(prev => [...prev, { id: crypto.randomUUID(), full_name: form.fullName, email: form.email, role: form.role }]
+        .sort((a, b) => a.full_name.localeCompare(b.full_name)))
       setCreatedPassword(generatedPassword)
       setAdding(false)
       setForm(EMPTY_FORM)
@@ -101,23 +101,15 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
       await updateUserRole(userId, pendingRole)
       setMembers(prev => prev.map(m => m.id === userId ? { ...m, role: pendingRole } : m))
       setEditingRoleId(null)
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to update role')
-    }
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed') }
   }
 
   async function handleDelete(userId: string, name: string) {
-    if (!confirm(`Delete ${name}? This cannot be undone.`)) return
+    if (!confirm(`Remove ${name} from the team? This cannot be undone.`)) return
     try {
       await deleteUser(userId)
       setMembers(prev => prev.filter(m => m.id !== userId))
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to delete user')
-    }
-  }
-
-  function openResetPanel(userId: string) {
-    setResetState({ userId, password: generatePassword(), applied: false, applying: false })
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed') }
   }
 
   async function applyReset() {
@@ -127,204 +119,234 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
       await resetUserPassword(resetState.userId, resetState.password)
       setResetState(s => s ? { ...s, applied: true, applying: false } : null)
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to reset password')
+      alert(err instanceof Error ? err.message : 'Failed')
       setResetState(s => s ? { ...s, applying: false } : null)
     }
   }
 
-  const roles = assignableRoles(currentUserRole)
+  const filtered = search.trim()
+    ? members.filter(m => m.full_name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase()))
+    : members
+
+  const inputCls = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 bg-slate-50 transition-colors'
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-3xl mx-auto page-enter">
+
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Team</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{members.length} members</p>
+          <p className="text-sm text-slate-400 mt-0.5">{members.length} members</p>
         </div>
-        <button
-          onClick={openAddForm}
-          className="px-3 py-1.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
-        >
+        <button onClick={openAddForm}
+          className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm shadow-brand-200">
           + Add member
         </button>
       </div>
 
-      {/* Created — share password banner */}
+      {/* ── Role summary cards ─────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {([['developer', '💻', 'Developers'], ['hr_admin', '👔', 'HR Admins'], ['super_admin', '⭐', 'Super Admins']] as const).map(([role, icon, label]) => (
+          <div key={role} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center shadow-sm">
+            <p className="text-lg">{icon}</p>
+            <p className="text-2xl font-bold text-slate-900 mt-0.5">{counts[role]}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Created password banner ────────────────────────────── */}
       {createdPassword && (
-        <div className="mb-5 bg-green-50 border border-green-200 rounded-xl p-4">
-          <p className="text-sm font-semibold text-green-800 mb-1">✓ Member created successfully</p>
-          <p className="text-xs text-green-700 mb-2">Share this temporary password with them — it won&apos;t be shown again.</p>
+        <div className="mb-5 bg-green-50 border border-green-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-green-600 font-bold text-sm">✓ Member created!</span>
+          </div>
+          <p className="text-xs text-green-700 mb-2">Share this temporary password — it won&apos;t be shown again.</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 text-sm bg-white border border-green-200 rounded-lg px-3 py-2 font-mono text-slate-800 select-all">
+            <code className="flex-1 text-sm bg-white border border-green-200 rounded-xl px-3 py-2 font-mono text-slate-800 select-all">
               {createdPassword}
             </code>
-            <button
-              onClick={() => copyToClipboard(createdPassword)}
-              className="shrink-0 text-xs px-3 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 transition-colors"
-            >
-              {copied ? 'Copied!' : 'Copy'}
+            <button onClick={() => copy(createdPassword, 'created')}
+              className="shrink-0 text-xs px-3 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium">
+              {copied === 'created' ? '✓ Copied' : 'Copy'}
             </button>
-            <button onClick={() => setCreatedPassword('')} className="text-green-600 hover:text-green-800 text-sm">✕</button>
+            <button onClick={() => setCreatedPassword('')} className="text-green-500 hover:text-green-700 px-1">✕</button>
           </div>
         </div>
       )}
 
-      {/* Add member form */}
+      {/* ── Add form ────────────────────────────────────────────── */}
       {adding && (
-        <form onSubmit={handleCreate} className="bg-white border border-slate-200 rounded-xl p-5 mb-5 space-y-3">
-          <h2 className="font-semibold text-slate-800 text-sm">New team member</h2>
+        <form onSubmit={handleCreate} className="bg-white border border-brand-200 rounded-2xl p-5 mb-5 space-y-4 shadow-sm">
+          <h2 className="font-bold text-slate-800">New team member</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Full name</label>
-              <input type="text" required placeholder="Jane Smith"
-                value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Full name</label>
+              <input type="text" required placeholder="Jane Smith" value={form.fullName}
+                onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
-              <input type="email" required placeholder="jane@company.com"
-                value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Email</label>
+              <input type="email" required placeholder="jane@kodesinc.com" value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-600 mb-1">Role</label>
-              <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as Role }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Role</label>
+              <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as Role }))} className={inputCls}>
                 {roles.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
               </select>
             </div>
           </div>
 
-          {/* Generated password — read-only, copyable */}
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
-            <p className="text-xs font-medium text-slate-600">Auto-generated temporary password</p>
+          {/* Generated password */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+            <p className="text-xs font-semibold text-slate-600 mb-2">🔑 Auto-generated password</p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-sm font-mono text-slate-800 select-all">{generatedPassword}</code>
-              <button type="button" onClick={() => copyToClipboard(generatedPassword)}
-                className="text-xs px-2.5 py-1 border border-slate-300 rounded-lg hover:bg-white transition-colors shrink-0">
-                {copied ? 'Copied!' : 'Copy'}
+              <button type="button" onClick={() => copy(generatedPassword, 'gen')}
+                className="text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg hover:bg-white text-slate-600 transition-colors font-medium">
+                {copied === 'gen' ? '✓' : 'Copy'}
               </button>
               <button type="button" onClick={() => setGeneratedPassword(generatePassword())}
-                className="text-xs px-2.5 py-1 border border-slate-300 rounded-lg hover:bg-white transition-colors shrink-0" title="Regenerate">
+                className="text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg hover:bg-white text-slate-500 transition-colors" title="Regenerate">
                 ↻
               </button>
             </div>
-            <p className="text-xs text-slate-400">The member can change it from their Profile settings.</p>
+            <p className="text-[11px] text-slate-400 mt-1.5">Member can change it from Profile settings.</p>
           </div>
 
-          {formError && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{formError}</p>
-          )}
-          <div className="flex gap-2">
+          {formError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">{formError}</p>}
+
+          <div className="flex gap-2 pt-1">
             <button type="submit" disabled={submitting}
-              className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-50 transition-colors">
-              {submitting ? 'Creating...' : 'Create member'}
+              className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-50 transition-colors">
+              {submitting ? 'Creating…' : 'Create member'}
             </button>
             <button type="button" onClick={() => { setAdding(false); setFormError('') }}
-              className="px-4 py-2 border border-slate-300 text-sm rounded-lg hover:bg-slate-50 transition-colors">
+              className="px-4 py-2 border border-slate-200 text-sm rounded-xl hover:bg-slate-50 text-slate-600 transition-colors">
               Cancel
             </button>
           </div>
         </form>
       )}
 
-      {/* Members list */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        {members.map((member, i) => {
+      {/* ── Search ──────────────────────────────────────────────── */}
+      <div className="relative mb-4">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" placeholder="Search members…" value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-colors" />
+      </div>
+
+      {/* ── Members table ───────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        {/* Table header */}
+        <div className="grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_140px_160px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Member</span>
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-right sm:text-left">Role</span>
+          <span className="hidden sm:block text-xs font-semibold text-slate-400 uppercase tracking-wide text-right">Actions</span>
+        </div>
+
+        {filtered.length === 0 && (
+          <div className="text-center py-10 text-slate-400 text-sm">No members match your search.</div>
+        )}
+
+        {filtered.map((member, i) => {
           const isSelf = member.id === currentUserId
           const manageable = canManage(currentUserRole, member.role, isSelf)
           const isEditingRole = editingRoleId === member.id
           const isResetting = resetState?.userId === member.id
 
           return (
-            <div key={member.id} className={i < members.length - 1 ? 'border-b border-slate-100' : ''}>
-              <div className={`flex items-center gap-4 px-5 py-4 ${isSelf ? 'bg-slate-50' : ''}`}>
-                {/* Avatar */}
-                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600 shrink-0">
-                  {member.full_name.charAt(0).toUpperCase()}
-                </div>
-
-                {/* Name + email */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{member.full_name}</p>
-                    {isSelf && <span className="text-xs text-slate-400">(you)</span>}
+            <div key={member.id} className={i < filtered.length - 1 ? 'border-b border-slate-100' : ''}>
+              <div className={`grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_140px_160px] gap-4 items-center px-5 py-4 ${isSelf ? 'bg-brand-50/30' : 'hover:bg-slate-50'} transition-colors`}>
+                {/* Avatar + name */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${AVATAR_BG[member.role]}`}>
+                    {member.full_name.charAt(0).toUpperCase()}
                   </div>
-                  <p className="text-xs text-slate-500 truncate">{member.email}</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{member.full_name}</p>
+                      {isSelf && <span className="text-[11px] text-brand-500 font-medium shrink-0">(you)</span>}
+                    </div>
+                    <p className="text-xs text-slate-400 truncate">{member.email}</p>
+                  </div>
                 </div>
 
-                {/* Role — static or editing */}
-                <div className="shrink-0">
+                {/* Role */}
+                <div>
                   {isEditingRole ? (
                     <div className="flex items-center gap-1">
                       <select value={pendingRole} onChange={e => setPendingRole(e.target.value as Role)}
-                        className="text-xs border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-slate-400">
+                        className="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white">
                         {roles.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>
                       <button onClick={() => handleRoleChange(member.id)}
-                        className="text-xs px-2 py-1 bg-slate-900 text-white rounded hover:bg-slate-700 transition-colors">✓</button>
+                        className="text-xs px-2 py-1 bg-brand-600 text-white rounded-lg hover:bg-brand-700">✓</button>
                       <button onClick={() => setEditingRoleId(null)}
-                        className="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50 transition-colors">✕</button>
+                        className="text-xs px-2 py-1 border border-slate-200 rounded-lg hover:bg-slate-50">✕</button>
                     </div>
                   ) : (
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${ROLE_COLORS[member.role]}`}>
+                    <span className={`inline-flex text-xs px-2.5 py-1 rounded-full font-semibold border ${ROLE_COLORS[member.role]}`}>
                       {ROLE_LABELS[member.role]}
                     </span>
                   )}
                 </div>
 
                 {/* Actions */}
-                {manageable && !isEditingRole && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => { setEditingRoleId(member.id); setPendingRole(member.role) }}
-                      className="text-xs text-slate-500 hover:text-slate-900 transition-colors">
-                      Edit role
-                    </button>
-                    <button
-                      onClick={() => isResetting ? setResetState(null) : openResetPanel(member.id)}
-                      className={`text-xs transition-colors ${isResetting ? 'text-amber-700 font-medium' : 'text-slate-500 hover:text-amber-600'}`}
-                    >
-                      {isResetting ? 'Cancel reset' : 'Reset pwd'}
-                    </button>
-                    <button onClick={() => handleDelete(member.id, member.full_name)}
-                      className="text-xs text-slate-400 hover:text-red-500 transition-colors">
-                      Delete
-                    </button>
-                  </div>
-                )}
+                <div className="hidden sm:flex items-center justify-end gap-1">
+                  {manageable && !isEditingRole && (
+                    <>
+                      <button onClick={() => { setEditingRoleId(member.id); setPendingRole(member.role) }}
+                        title="Edit role"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button onClick={() => isResetting ? setResetState(null) : setResetState({ userId: member.id, password: generatePassword(), applied: false, applying: false })}
+                        title="Reset password"
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isResetting ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      </button>
+                      <button onClick={() => handleDelete(member.id, member.full_name)}
+                        title="Remove member"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Inline password reset panel */}
+              {/* Reset password panel */}
               {isResetting && (
-                <div className="border-t border-slate-100 bg-amber-50 px-5 py-3 space-y-2">
-                  <p className="text-xs font-medium text-amber-800">Reset password for {member.full_name}</p>
+                <div className="border-t border-slate-100 bg-amber-50 px-5 py-3 space-y-2.5">
+                  <p className="text-xs font-semibold text-amber-800">Reset password for {member.full_name}</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-sm font-mono text-slate-800 bg-white border border-amber-200 rounded-lg px-3 py-2 select-all">
+                    <code className="flex-1 text-sm font-mono text-slate-800 bg-white border border-amber-200 rounded-xl px-3 py-2 select-all">
                       {resetState!.password}
                     </code>
-                    <button onClick={() => copyToClipboard(resetState!.password)}
-                      className="text-xs px-2.5 py-2 border border-amber-300 bg-white rounded-lg hover:bg-amber-50 shrink-0 transition-colors">
-                      {copied ? 'Copied!' : 'Copy'}
+                    <button onClick={() => copy(resetState!.password, 'reset')}
+                      className="text-xs px-2.5 py-2 border border-amber-300 bg-white rounded-xl hover:bg-amber-50 shrink-0 transition-colors font-medium">
+                      {copied === 'reset' ? '✓' : 'Copy'}
                     </button>
                     <button onClick={() => setResetState(s => s ? { ...s, password: generatePassword() } : null)}
-                      title="Regenerate" className="text-xs px-2.5 py-2 border border-amber-300 bg-white rounded-lg hover:bg-amber-50 shrink-0 transition-colors">
-                      ↻
-                    </button>
+                      className="text-xs px-2.5 py-2 border border-amber-300 bg-white rounded-xl hover:bg-amber-50 shrink-0 transition-colors">↻</button>
                   </div>
-                  {resetState!.applied ? (
-                    <p className="text-xs text-green-700 font-medium">✓ Password reset. Share the new password with the member.</p>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button onClick={applyReset} disabled={resetState!.applying}
-                        className="text-xs px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors">
-                        {resetState!.applying ? 'Applying...' : 'Apply reset'}
-                      </button>
-                      <button onClick={() => setResetState(null)}
-                        className="text-xs px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-white transition-colors">
-                        Cancel
-                      </button>
-                    </div>
-                  )}
+                  {resetState!.applied
+                    ? <p className="text-xs text-green-700 font-semibold">✓ Password reset. Share it with {member.full_name}.</p>
+                    : (
+                      <div className="flex gap-2">
+                        <button onClick={applyReset} disabled={resetState!.applying}
+                          className="text-xs px-3 py-1.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 disabled:opacity-50 transition-colors font-semibold">
+                          {resetState!.applying ? 'Applying…' : 'Apply reset'}
+                        </button>
+                        <button onClick={() => setResetState(null)}
+                          className="text-xs px-3 py-1.5 border border-slate-200 rounded-xl hover:bg-white text-slate-600 transition-colors">Cancel</button>
+                      </div>
+                    )}
                 </div>
               )}
             </div>

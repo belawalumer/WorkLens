@@ -22,6 +22,11 @@ function getWeekDates() {
 
 const WEEKDAYS = getWeekDates()
 
+const DAY_LABEL = (date: string) =>
+  date === TODAY
+    ? 'Today'
+    : new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+
 interface Props {
   initialTasks: Task[]
   projects: Project[]
@@ -46,6 +51,7 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
   const [addingProject, setAddingProject] = useState(false)
   const [projectList, setProjectList] = useState(projects)
   const [estimateEdit, setEstimateEdit] = useState<EstimateEdit | null>(null)
+  const [activeDay, setActiveDay] = useState(TODAY)
   const supabase = createClient()
 
   useEffect(() => {
@@ -67,12 +73,13 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
     e.preventDefault()
     if (!form.title.trim()) return
     setSaving(true)
+    const date = view === 'today' ? TODAY : activeDay
     await supabase.from('tasks').insert({
       developer_id: userId,
       title: form.title.trim(),
       estimated_hours: parseFloat(form.estimated_hours) || 1,
       project_id: form.project_id || null,
-      task_date: form.task_date,
+      task_date: date,
     })
     setForm({ title: '', estimated_hours: '1', project_id: '', task_date: TODAY })
     setAdding(false)
@@ -108,210 +115,243 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
     if (!estimateEdit) return
     const newHours = parseFloat(estimateEdit.hours)
     if (isNaN(newHours) || newHours <= 0) return
-
     if (newHours !== estimateEdit.originalHours && !estimateEdit.reason.trim()) {
       setEstimateEdit(prev => prev ? { ...prev, reasonError: true } : null)
       return
     }
-
     await supabase.from('tasks').update({
       estimated_hours: newHours,
       ...(newHours !== estimateEdit.originalHours ? { estimate_change_reason: estimateEdit.reason.trim() } : {}),
     }).eq('id', estimateEdit.taskId)
-
     setEstimateEdit(null)
   }
 
+  const todayTasks = tasks.filter(t => t.task_date === TODAY)
+  const totalToday = todayTasks.reduce((s, t) => s + t.estimated_hours, 0)
+  const doneToday = todayTasks.filter(t => t.completed).reduce((s, t) => s + t.estimated_hours, 0)
+  const freeToday = Math.max(0, 8 - totalToday)
+
   const visibleDates = view === 'today' ? [TODAY] : WEEKDAYS
-  const totalToday = tasks.filter(t => t.task_date === TODAY).reduce((s, t) => s + t.estimated_hours, 0)
-  const doneToday = tasks.filter(t => t.task_date === TODAY && t.completed).reduce((s, t) => s + t.estimated_hours, 0)
+  const displayDate = view === 'today' ? TODAY : activeDay
+
+  const inputCls = 'w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-colors bg-slate-50'
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-2xl mx-auto page-enter">
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 mb-5">
         <div>
           <h1 className="text-xl font-bold text-slate-900">My Tasks</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Today: {totalToday.toFixed(1)}h planned · {doneToday.toFixed(1)}h done · {Math.max(0, 8 - totalToday).toFixed(1)}h free
-          </p>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+              📅 {totalToday.toFixed(1)}h planned
+            </span>
+            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+              ✅ {doneToday.toFixed(1)}h done
+            </span>
+            <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${freeToday > 2 ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>
+              🔵 {freeToday.toFixed(1)}h free
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden text-sm">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden text-sm shadow-sm">
             {(['today', 'week'] as const).map(v => (
               <button key={v} onClick={() => setView(v)}
-                className={`px-3 py-1.5 font-medium transition-colors ${view === v ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-900'}`}>
+                className={`px-3 py-1.5 font-medium transition-colors ${view === v ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}>
                 {v === 'today' ? 'Today' : 'This Week'}
               </button>
             ))}
           </div>
-          <button
-            onClick={() => setAdding(true)}
-            className="px-3 py-1.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
-          >
+          <button onClick={() => setAdding(a => !a)}
+            className="px-3 py-1.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm shadow-brand-200">
             + Add task
           </button>
         </div>
       </div>
 
-      {/* Add task form */}
+      {/* ── Week day tabs ─────────────────────────────────────── */}
+      {view === 'week' && (
+        <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+          {WEEKDAYS.map(date => {
+            const count = tasks.filter(t => t.task_date === date).length
+            const isActive = activeDay === date
+            const isToday = date === TODAY
+            return (
+              <button key={date} onClick={() => setActiveDay(date)}
+                className={`flex-1 min-w-[72px] px-3 py-2 rounded-xl text-center text-xs transition-colors ${
+                  isActive ? 'bg-brand-600 text-white shadow-sm shadow-brand-200' : 'bg-white border border-slate-200 text-slate-600 hover:border-brand-300'
+                }`}>
+                <div className="font-semibold">
+                  {new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
+                </div>
+                <div className={`text-[10px] mt-0.5 ${isActive ? 'text-brand-200' : isToday ? 'text-brand-600 font-semibold' : 'text-slate-400'}`}>
+                  {isToday ? 'Today' : new Date(date + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                </div>
+                {count > 0 && (
+                  <div className={`mt-1 w-1.5 h-1.5 rounded-full mx-auto ${isActive ? 'bg-brand-300' : 'bg-brand-400'}`} />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── Add task form ─────────────────────────────────────── */}
       {adding && (
-        <form onSubmit={addTask} className="bg-white border border-slate-200 rounded-xl p-4 mb-4 space-y-3">
-          <input
-            autoFocus
-            type="text"
-            placeholder="Task title"
-            value={form.title}
-            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-          />
+        <form onSubmit={addTask} className="bg-white border border-brand-200 rounded-2xl p-4 mb-4 space-y-3 shadow-sm">
+          <input autoFocus type="text" placeholder="What needs to be done?"
+            value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            className={inputCls} />
           <div className="flex gap-2 flex-wrap">
-            <input
-              type="number"
-              min="0.5" max="24" step="0.5"
-              value={form.estimated_hours}
-              onChange={e => setForm(f => ({ ...f, estimated_hours: e.target.value }))}
-              className="w-24 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-              placeholder="Hours"
-            />
-            <input
-              type="date"
-              value={form.task_date}
-              onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-            />
-            <div className="flex gap-1 flex-1 min-w-[160px]">
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+              <span className="text-xs text-slate-500 shrink-0">⏱</span>
+              <input type="number" min="0.5" max="24" step="0.5" value={form.estimated_hours}
+                onChange={e => setForm(f => ({ ...f, estimated_hours: e.target.value }))}
+                className="w-14 text-sm focus:outline-none bg-transparent" />
+              <span className="text-xs text-slate-500">h</span>
+            </div>
+            <div className="flex gap-1 flex-1 min-w-[180px]">
               {addingProject ? (
                 <form onSubmit={createProject} className="flex gap-1 flex-1">
-                  <input
-                    autoFocus type="text" placeholder="Project name"
-                    value={addProject} onChange={e => setAddProject(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  />
-                  <button type="submit" className="px-2 py-2 bg-slate-900 text-white rounded-lg text-xs">✓</button>
-                  <button type="button" onClick={() => setAddingProject(false)} className="px-2 py-2 border border-slate-300 rounded-lg text-xs">✕</button>
+                  <input autoFocus type="text" placeholder="Project name" value={addProject}
+                    onChange={e => setAddProject(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50" />
+                  <button type="submit" className="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-medium">Save</button>
+                  <button type="button" onClick={() => setAddingProject(false)} className="px-3 py-2 border border-slate-200 rounded-xl text-xs">✕</button>
                 </form>
               ) : (
                 <>
                   <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50">
                     <option value="">No project</option>
                     {projectList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
-                  <button type="button" onClick={() => setAddingProject(true)} title="New project"
-                    className="px-2 py-2 border border-slate-300 rounded-lg text-sm hover:bg-slate-50">+</button>
+                  <button type="button" onClick={() => setAddingProject(true)}
+                    className="px-2.5 border border-slate-200 rounded-xl text-sm hover:bg-slate-100 transition-colors" title="New project">
+                    + New
+                  </button>
                 </>
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 pt-1">
             <button type="submit" disabled={saving}
-              className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-50 transition-colors">
-              {saving ? 'Saving...' : 'Add task'}
+              className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-50 transition-colors">
+              {saving ? 'Saving…' : 'Add task'}
             </button>
             <button type="button" onClick={() => setAdding(false)}
-              className="px-4 py-2 border border-slate-300 text-sm rounded-lg hover:bg-slate-50 transition-colors">
+              className="px-4 py-2 border border-slate-200 text-sm rounded-xl hover:bg-slate-50 text-slate-600 transition-colors">
               Cancel
             </button>
           </div>
         </form>
       )}
 
-      {/* Tasks grouped by date */}
-      {visibleDates.map(date => {
+      {/* ── Task list ─────────────────────────────────────────── */}
+      {(view === 'today' ? [TODAY] : [displayDate]).map(date => {
         const dayTasks = tasks.filter(t => t.task_date === date)
-        const dayLabel = date === TODAY ? 'Today' : new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
         const dayHours = dayTasks.reduce((s, t) => s + t.estimated_hours, 0)
+        const doneHours = dayTasks.filter(t => t.completed).reduce((s, t) => s + t.estimated_hours, 0)
 
         return (
-          <div key={date} className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-sm font-semibold text-slate-600">{dayLabel}</h2>
-              {dayHours > 0 && <span className="text-xs text-slate-400">{dayHours.toFixed(1)}h</span>}
-            </div>
+          <div key={date}>
+            {view === 'week' && (
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-slate-700">{DAY_LABEL(date)}</h2>
+                {dayHours > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span>{doneHours.toFixed(1)}h / {dayHours.toFixed(1)}h</span>
+                    <div className="w-24 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-full bg-brand-500 rounded-full" style={{ width: `${Math.min(100, (doneHours / dayHours) * 100)}%` }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {dayTasks.length === 0 ? (
-              <p className="text-sm text-slate-400 italic px-1">No tasks planned</p>
+              <div className="text-center py-10 bg-white border border-dashed border-slate-200 rounded-2xl">
+                <p className="text-slate-400 text-sm font-medium">No tasks {view === 'today' ? 'for today' : 'this day'}</p>
+                <button onClick={() => setAdding(true)}
+                  className="mt-2 text-brand-600 text-sm font-semibold hover:text-brand-800">
+                  + Add one →
+                </button>
+              </div>
             ) : (
               <div className="space-y-2">
                 {dayTasks.map(task => (
-                  <div key={task.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden group">
+                  <div key={task.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden group hover:border-slate-300 transition-colors">
                     {/* Task row */}
-                    <div className="px-4 py-3 flex items-center gap-3">
-                      <button
-                        onClick={() => toggleDone(task)}
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${task.completed ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-slate-500'}`}
-                      >
-                        {task.completed && <span className="text-xs">✓</span>}
+                    <div className="flex items-center gap-3 px-4 py-3.5">
+                      <button onClick={() => toggleDone(task)}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                          task.completed
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : 'border-slate-300 hover:border-brand-400'
+                        }`}>
+                        {task.completed && <span className="text-[10px] font-bold">✓</span>}
                       </button>
+
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                        <p className={`text-sm font-medium leading-snug ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                           {task.title}
                         </p>
-                        {task.project && <p className="text-xs text-slate-400">{task.project.name}</p>}
-                        {task.estimate_change_reason && (
-                          <p className="text-xs text-amber-600 mt-0.5">
-                            ✏️ Changed: {task.estimate_change_reason}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {task.project && (
+                            <span className="text-xs text-slate-400">{task.project.name}</span>
+                          )}
+                          {task.estimate_change_reason && (
+                            <span className="text-[11px] text-amber-600">✏️ {task.estimate_change_reason}</span>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Hours — click to edit */}
                       <button
                         onClick={() => estimateEdit?.taskId === task.id ? setEstimateEdit(null) : openEstimateEdit(task)}
-                        title="Edit estimate"
-                        className={`text-sm shrink-0 px-2 py-0.5 rounded transition-colors ${estimateEdit?.taskId === task.id ? 'bg-slate-200 text-slate-800 font-semibold' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
-                      >
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors shrink-0 ${
+                          estimateEdit?.taskId === task.id
+                            ? 'bg-brand-100 text-brand-700'
+                            : 'bg-slate-100 text-slate-600 hover:bg-brand-50 hover:text-brand-700'
+                        }`}>
                         {task.estimated_hours}h
                       </button>
-                      <button
-                        onClick={() => deleteTask(task.id)}
-                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all text-sm shrink-0"
-                      >
+
+                      <button onClick={() => deleteTask(task.id)}
+                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all text-sm px-1 shrink-0">
                         ✕
                       </button>
                     </div>
 
-                    {/* Inline estimate edit panel */}
+                    {/* Inline estimate edit */}
                     {estimateEdit?.taskId === task.id && (
-                      <form onSubmit={saveEstimate} className="border-t border-slate-100 px-4 py-3 bg-slate-50 space-y-2">
+                      <form onSubmit={saveEstimate} className="border-t border-slate-100 bg-slate-50 px-4 py-3 space-y-2.5">
                         <div className="flex items-center gap-2">
-                          <label className="text-xs font-medium text-slate-600 shrink-0">New estimate</label>
-                          <input
-                            autoFocus
-                            type="number" min="0.5" max="24" step="0.5"
+                          <label className="text-xs font-semibold text-slate-600 shrink-0">New estimate</label>
+                          <input autoFocus type="number" min="0.5" max="24" step="0.5"
                             value={estimateEdit.hours}
-                            onChange={e => setEstimateEdit(prev => prev ? { ...prev, hours: e.target.value, reasonError: false } : null)}
-                            className="w-20 px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                          />
+                            onChange={e => setEstimateEdit(p => p ? { ...p, hours: e.target.value, reasonError: false } : null)}
+                            className="w-20 px-2.5 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" />
                           <span className="text-xs text-slate-400">hours</span>
                         </div>
-
-                        {/* Reason box — only required when hours actually change */}
                         {parseFloat(estimateEdit.hours) !== estimateEdit.originalHours && (
                           <div>
-                            <label className="text-xs font-medium text-slate-600 block mb-1">
+                            <label className="text-xs font-semibold text-slate-600 block mb-1">
                               Reason for change <span className="text-red-500">*</span>
                             </label>
-                            <textarea
-                              autoFocus
-                              rows={2}
+                            <textarea autoFocus rows={2}
                               placeholder="Why are you changing the estimate?"
                               value={estimateEdit.reason}
-                              onChange={e => setEstimateEdit(prev => prev ? { ...prev, reason: e.target.value, reasonError: false } : null)}
-                              className={`w-full px-2 py-1.5 border rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-400 ${estimateEdit.reasonError ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+                              onChange={e => setEstimateEdit(p => p ? { ...p, reason: e.target.value, reasonError: false } : null)}
+                              className={`w-full px-2.5 py-1.5 border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white ${estimateEdit.reasonError ? 'border-red-400' : 'border-slate-200'}`}
                             />
-                            {estimateEdit.reasonError && (
-                              <p className="text-xs text-red-500 mt-0.5">Reason is required when changing an estimate.</p>
-                            )}
+                            {estimateEdit.reasonError && <p className="text-xs text-red-500 mt-0.5">Reason is required when changing an estimate.</p>}
                           </div>
                         )}
-
                         <div className="flex gap-2">
-                          <button type="submit"
-                            className="px-3 py-1 bg-slate-900 text-white text-xs font-medium rounded hover:bg-slate-700 transition-colors">
-                            Save
-                          </button>
-                          <button type="button" onClick={() => setEstimateEdit(null)}
-                            className="px-3 py-1 border border-slate-300 text-xs rounded hover:bg-white transition-colors">
-                            Cancel
-                          </button>
+                          <button type="submit" className="px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 transition-colors">Save</button>
+                          <button type="button" onClick={() => setEstimateEdit(null)} className="px-3 py-1.5 border border-slate-200 text-xs rounded-lg hover:bg-white text-slate-600 transition-colors">Cancel</button>
                         </div>
                       </form>
                     )}
