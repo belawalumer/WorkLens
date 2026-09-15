@@ -46,10 +46,11 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-brand-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-200">
-            <span className="text-white text-2xl font-black">W</span>
+          <div className="mb-4">
+            <span className="text-brand-600 font-black text-4xl tracking-tight">Work</span>
+            <span className="text-slate-900 font-black text-4xl tracking-tight">Lens</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">WorkLens</h1>
+          <h1 className="sr-only">WorkLens</h1>
           <p className="text-slate-500 mt-1 text-sm">Developer workload dashboard</p>
         </div>
 

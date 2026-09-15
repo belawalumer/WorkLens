@@ -35,8 +35,26 @@ export default function NotificationBell({ userRole }: { userRole: Role }) {
 
   const unread = notifs.filter(n => !n.read).length
 
+  function playSound() {
+    try {
+      const ctx = new AudioContext()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1)
+      gain.gain.setValueAtTime(0.08, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.4)
+    } catch { /* AudioContext not available (e.g. SSR) */ }
+  }
+
   function push(n: Omit<Notif, 'id' | 'at' | 'read'>) {
     setNotifs(prev => [{ ...n, id: crypto.randomUUID(), at: new Date(), read: false }, ...prev].slice(0, 25))
+    playSound()
   }
 
   useEffect(() => {
