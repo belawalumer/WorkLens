@@ -142,12 +142,15 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
         {dev.tasks.length > 0 ? (
           <>
             {(expanded ? dev.tasks : dev.tasks.slice(0, 3)).map(task => (
-              <div key={task.id} className="flex items-center gap-2">
+              <div key={task.id} className="relative flex items-center gap-2 group/task">
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.completed ? 'bg-green-400' : 'bg-slate-300'}`} />
                 <span className={`flex-1 truncate text-xs ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
                   {task.title}
                 </span>
                 <span className="text-[11px] text-slate-400 shrink-0 tabular-nums">{fmt(task.estimated_hours)}h</span>
+                <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 px-2.5 py-1.5 text-xs bg-slate-800 text-white rounded-lg whitespace-normal max-w-[220px] opacity-0 group-hover/task:opacity-100 transition-opacity z-30 shadow-lg leading-snug">
+                  {task.title}
+                </div>
               </div>
             ))}
             {dev.tasks.length > 3 && (
