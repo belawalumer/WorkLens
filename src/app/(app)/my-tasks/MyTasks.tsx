@@ -87,10 +87,12 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
   }
 
   async function toggleDone(task: Task) {
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t))
     await supabase.from('tasks').update({ completed: !task.completed }).eq('id', task.id)
   }
 
   async function deleteTask(id: string) {
+    setTasks(prev => prev.filter(t => t.id !== id))
     await supabase.from('tasks').delete().eq('id', id)
   }
 
@@ -119,10 +121,12 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
       setEstimateEdit(prev => prev ? { ...prev, reasonError: true } : null)
       return
     }
-    await supabase.from('tasks').update({
+    const update = {
       estimated_hours: newHours,
       ...(newHours !== estimateEdit.originalHours ? { estimate_change_reason: estimateEdit.reason.trim() } : {}),
-    }).eq('id', estimateEdit.taskId)
+    }
+    setTasks(prev => prev.map(t => t.id === estimateEdit!.taskId ? { ...t, ...update } : t))
+    await supabase.from('tasks').update(update).eq('id', estimateEdit.taskId)
     setEstimateEdit(null)
   }
 
@@ -319,8 +323,10 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
                       </button>
 
                       <button onClick={() => deleteTask(task.id)}
-                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all text-sm px-1 shrink-0">
-                        ✕
+                        className="text-slate-300 hover:text-red-500 transition-colors shrink-0 px-1">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/>
+                        </svg>
                       </button>
                     </div>
 

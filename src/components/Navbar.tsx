@@ -10,9 +10,10 @@ import NotificationBell from './NotificationBell'
 interface Props {
   userName: string
   userRole: Role
+  userId: string
 }
 
-export default function Navbar({ userName, userRole }: Props) {
+export default function Navbar({ userName, userRole, userId }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -71,7 +72,7 @@ export default function Navbar({ userName, userRole }: Props) {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
-          <NotificationBell userRole={userRole} />
+          <NotificationBell userRole={userRole} userId={userId} />
 
           {/* User dropdown */}
           <div className="relative" ref={dropdownRef}>

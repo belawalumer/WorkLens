@@ -388,19 +388,6 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* ── Available capacity strip ────────────────────────────────────── */}
-      {availableCount > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800 flex items-start gap-2">
-          <span className="text-base shrink-0 mt-0.5">🔵</span>
-          <span>
-            <strong>{availableCount} developer{availableCount > 1 ? 's' : ''}</strong> with free capacity today —{' '}
-            {availableDevs
-              .map(d => `${d.full_name} (${d.freeHours.toFixed(1)}h free)`)
-              .join(', ')}
-          </span>
-        </div>
-      )}
-
       {/* ── Developer cards ─────────────────────────────────────────────── */}
       <div>
         <h2 className="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">

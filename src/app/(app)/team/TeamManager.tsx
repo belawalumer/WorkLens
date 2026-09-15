@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Profile, Role, ROLE_LABELS } from '@/types'
-import { createUser, updateUserRole, deleteUser, resetUserPassword } from '@/app/actions/users'
+import { createUser, updateUserRole, deleteUser, resetUserPassword, updateUserProfile } from '@/app/actions/users'
 
 interface Props {
   members: Profile[]
@@ -43,6 +43,7 @@ type AddForm = { fullName: string; email: string; role: Role }
 const EMPTY_FORM: AddForm = { fullName: '', email: '', role: 'developer' }
 
 interface ResetState { userId: string; password: string; applied: boolean; applying: boolean }
+interface EditProfileState { userId: string; fullName: string; email: string; saving: boolean }
 
 export default function TeamManager({ members: init, currentUserId, currentUserRole }: Props) {
   const [members, setMembers] = useState(init)
@@ -55,12 +56,12 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
   const [pendingRole, setPendingRole] = useState<Role>('developer')
   const [resetState, setResetState] = useState<ResetState | null>(null)
+  const [editProfile, setEditProfile] = useState<EditProfileState | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
   const roles = assignableRoles(currentUserRole)
 
-  // Role counts
   const counts: Record<Role, number> = { super_admin: 0, hr_admin: 0, developer: 0 }
   members.forEach(m => counts[m.role]++)
 
@@ -124,11 +125,33 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     }
   }
 
+  async function saveProfile(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editProfile) return
+    setEditProfile(s => s ? { ...s, saving: true } : null)
+    try {
+      await updateUserProfile(editProfile.userId, { fullName: editProfile.fullName, email: editProfile.email })
+      setMembers(prev => prev.map(m => m.id === editProfile.userId
+        ? { ...m, full_name: editProfile.fullName, email: editProfile.email } : m))
+      setEditProfile(null)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed')
+      setEditProfile(s => s ? { ...s, saving: false } : null)
+    }
+  }
+
   const filtered = search.trim()
     ? members.filter(m => m.full_name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase()))
     : members
 
   const inputCls = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 bg-slate-50 transition-colors'
+
+  // Summary cards: super_admin sees all 3; others see only developer + hr_admin
+  const summaryCards = (
+    currentUserRole === 'super_admin'
+      ? [['developer', '💻', 'Developers'], ['hr_admin', '👔', 'HR Admins'], ['super_admin', '⭐', 'Super Admins']]
+      : [['developer', '💻', 'Developers'], ['hr_admin', '👔', 'HR Admins']]
+  ) as [Role, string, string][]
 
   return (
     <div className="max-w-3xl mx-auto page-enter">
@@ -139,15 +162,17 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
           <h1 className="text-xl font-bold text-slate-900">Team</h1>
           <p className="text-sm text-slate-400 mt-0.5">{members.length} members</p>
         </div>
-        <button onClick={openAddForm}
-          className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm shadow-brand-200">
-          + Add member
-        </button>
+        {currentUserRole !== 'developer' && (
+          <button onClick={openAddForm}
+            className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm shadow-brand-200">
+            + Add member
+          </button>
+        )}
       </div>
 
       {/* ── Role summary cards ─────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
-        {([['developer', '💻', 'Developers'], ['hr_admin', '👔', 'HR Admins'], ['super_admin', '⭐', 'Super Admins']] as const).map(([role, icon, label]) => (
+      <div className={`grid grid-cols-${summaryCards.length} gap-3 mb-5`}>
+        {summaryCards.map(([role, icon, label]) => (
           <div key={role} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center shadow-sm">
             <p className="text-lg">{icon}</p>
             <p className="text-2xl font-bold text-slate-900 mt-0.5">{counts[role]}</p>
@@ -199,7 +224,6 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
             </div>
           </div>
 
-          {/* Generated password */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
             <p className="text-xs font-semibold text-slate-600 mb-2">🔑 Auto-generated password</p>
             <div className="flex items-center gap-2">
@@ -242,7 +266,6 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
 
       {/* ── Members table ───────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        {/* Table header */}
         <div className="grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_140px_160px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Member</span>
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-right sm:text-left">Role</span>
@@ -258,6 +281,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
           const manageable = canManage(currentUserRole, member.role, isSelf)
           const isEditingRole = editingRoleId === member.id
           const isResetting = resetState?.userId === member.id
+          const isEditingProfile = editProfile?.userId === member.id
 
           return (
             <div key={member.id} className={i < filtered.length - 1 ? 'border-b border-slate-100' : ''}>
@@ -300,11 +324,26 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
                 <div className="hidden sm:flex items-center justify-end gap-1">
                   {manageable && !isEditingRole && (
                     <>
-                      <button onClick={() => { setEditingRoleId(member.id); setPendingRole(member.role) }}
-                        title="Edit role"
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      {/* Edit profile (name/email) */}
+                      <button
+                        onClick={() => isEditingProfile
+                          ? setEditProfile(null)
+                          : setEditProfile({ userId: member.id, fullName: member.full_name, email: member.email, saving: false })
+                        }
+                        title="Edit profile"
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isEditingProfile ? 'text-brand-600 bg-brand-50' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       </button>
+
+                      {/* Edit role — super_admin only */}
+                      {currentUserRole === 'super_admin' && (
+                        <button onClick={() => { setEditingRoleId(member.id); setPendingRole(member.role) }}
+                          title="Edit role"
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                      )}
+
                       <button onClick={() => isResetting ? setResetState(null) : setResetState({ userId: member.id, password: generatePassword(), applied: false, applying: false })}
                         title="Reset password"
                         className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isResetting ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}>
@@ -319,6 +358,35 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
                   )}
                 </div>
               </div>
+
+              {/* Edit profile panel */}
+              {isEditingProfile && (
+                <form onSubmit={saveProfile} className="border-t border-slate-100 bg-brand-50/30 px-5 py-4 space-y-3">
+                  <p className="text-xs font-semibold text-slate-700">Edit profile — {member.full_name}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Full name</label>
+                      <input type="text" required value={editProfile!.fullName}
+                        onChange={e => setEditProfile(s => s ? { ...s, fullName: e.target.value } : null)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Email</label>
+                      <input type="email" required value={editProfile!.email}
+                        onChange={e => setEditProfile(s => s ? { ...s, email: e.target.value } : null)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={editProfile!.saving}
+                      className="text-xs px-3 py-1.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 disabled:opacity-50 font-semibold transition-colors">
+                      {editProfile!.saving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button type="button" onClick={() => setEditProfile(null)}
+                      className="text-xs px-3 py-1.5 border border-slate-200 rounded-xl hover:bg-white text-slate-600 transition-colors">Cancel</button>
+                  </div>
+                </form>
+              )}
 
               {/* Reset password panel */}
               {isResetting && (

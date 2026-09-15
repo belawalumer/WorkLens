@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Navbar
         userName={profile?.full_name ?? user.email ?? ''}
         userRole={(profile?.role as Role) ?? 'developer'}
+        userId={user.id}
       />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</main>
     </div>

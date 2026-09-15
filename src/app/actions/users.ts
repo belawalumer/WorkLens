@@ -75,6 +75,32 @@ export async function deleteUser(userId: string) {
   revalidatePath('/team')
 }
 
+export async function updateUserProfile(userId: string, payload: { fullName?: string; email?: string }) {
+  const myRole = await getMyRole()
+  if (!myRole || myRole === 'developer') throw new Error('Unauthorized')
+
+  if (myRole === 'hr_admin') {
+    const targetRole = await getTargetRole(userId)
+    if (targetRole !== 'developer') throw new Error('HR admins can only edit developers')
+  }
+
+  const admin = createAdminClient()
+  const authUpdate: { email?: string; user_metadata?: { full_name: string } } = {}
+  if (payload.email) authUpdate.email = payload.email
+  if (payload.fullName) authUpdate.user_metadata = { full_name: payload.fullName }
+  const { error } = await admin.auth.admin.updateUserById(userId, authUpdate)
+  if (error) throw error
+
+  const profileUpdate: { full_name?: string; email?: string } = {}
+  if (payload.fullName) profileUpdate.full_name = payload.fullName
+  if (payload.email) profileUpdate.email = payload.email
+  if (Object.keys(profileUpdate).length) {
+    await admin.from('profiles').update(profileUpdate).eq('id', userId)
+  }
+
+  revalidatePath('/team')
+}
+
 export async function resetUserPassword(userId: string, newPassword: string) {
   const myRole = await getMyRole()
   if (!myRole || myRole === 'developer') throw new Error('Unauthorized')
