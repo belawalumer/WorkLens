@@ -6,7 +6,7 @@ import {
   ReferenceLine, Cell, PieChart, Pie,
 } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role } from '@/types'
+import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus } from '@/types'
 import DeveloperCard from '@/components/DeveloperCard'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
@@ -198,18 +198,21 @@ export default function Dashboard({
 
   const developers = buildDeveloperData(profiles, roles, tasks, viewMode)
 
-  // Filtered list for cards
-  const filtered = filter === 'all' ? developers
-    : filter === 'available' ? developers.filter(d => d.status === 'available' || d.status === 'underloaded')
-    : developers.filter(d => d.status === 'overloaded')
+  // Devs actively working (exclude on_leave / vacation from hour calculations)
+  const activeDevs = developers.filter(d => !UNAVAILABLE_STATUSES.includes((d.user_status ?? 'active') as UserStatus))
 
-  // Stat card values
-  const overloadedCount = developers.filter(d => d.status === 'overloaded').length
-  const availableDevs = developers.filter(d => d.role === 'developer' && d.freeHours > 0)
+  // Filtered list for cards (still show unavailable devs in "all" view)
+  const filtered = filter === 'all' ? developers
+    : filter === 'available' ? activeDevs.filter(d => d.status === 'available' || d.status === 'underloaded')
+    : activeDevs.filter(d => d.status === 'overloaded')
+
+  // Stat card values — based on active devs only
+  const overloadedCount = activeDevs.filter(d => d.status === 'overloaded').length
+  const availableDevs = activeDevs.filter(d => d.role === 'developer' && d.freeHours > 0)
   const availableCount = availableDevs.length
   const totalFreeCapacity = availableDevs.reduce((s, d) => s + d.freeHours, 0)
-  const totalPlanned = developers.reduce((s, d) => s + d.todayHours, 0)
-  const avgLoad = developers.length > 0 ? totalPlanned / developers.length : 0
+  const totalPlanned = activeDevs.reduce((s, d) => s + d.todayHours, 0)
+  const avgLoad = activeDevs.length > 0 ? totalPlanned / activeDevs.length : 0
 
   // Bar chart data — sorted by planned hours desc
   const barData: BarEntry[] = [...developers]
@@ -416,7 +419,11 @@ export default function Dashboard({
           {' '}· {filtered.length}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(dev => (
+          {[...filtered].sort((a, b) => {
+            if (a.id === currentUserId) return -1
+            if (b.id === currentUserId) return 1
+            return 0
+          }).map(dev => (
             <DeveloperCard key={dev.id} dev={dev} isMe={dev.id === currentUserId} viewerRole={currentUserRole} />
           ))}
           {filtered.length === 0 && (

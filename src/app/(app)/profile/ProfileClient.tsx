@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, ROLE_LABELS, Role } from '@/types'
+import { Profile, ROLE_LABELS, Role, UserStatus, USER_STATUS_CONFIG } from '@/types'
 
 interface Props {
   profile: Profile | null
@@ -58,8 +58,13 @@ export default function ProfileClient({ profile, userId }: Props) {
     <div className="page-enter space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-brand-100 flex items-center justify-center shrink-0">
-          <span className="text-brand-700 text-xl font-black">{initials(profile?.full_name ?? 'U')}</span>
+        <div className="relative shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-brand-100 flex items-center justify-center">
+            <span className="text-brand-700 text-xl font-black">{initials(profile?.full_name ?? 'U')}</span>
+          </div>
+          <span className="absolute -bottom-1 -right-1 flex items-center justify-center w-5 h-5 bg-white rounded-full text-[11px] leading-none shadow-sm ring-1 ring-slate-100">
+            {USER_STATUS_CONFIG[(profile?.user_status ?? 'active') as UserStatus].emoji}
+          </span>
         </div>
         <div>
           <h1 className="text-xl font-bold text-slate-900">{profile?.full_name ?? 'Profile'}</h1>

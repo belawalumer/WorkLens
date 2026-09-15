@@ -1,5 +1,17 @@
 export type Role = 'super_admin' | 'hr_admin' | 'developer'
 export type WorkloadStatus = 'overloaded' | 'full' | 'underloaded' | 'available'
+export type UserStatus = 'active' | 'away' | 'dnd' | 'in_meeting' | 'on_leave' | 'vacation'
+
+export const USER_STATUS_CONFIG: Record<UserStatus, { label: string; emoji: string; dotBg: string }> = {
+  active:     { label: 'Active',         emoji: '🟢', dotBg: 'bg-emerald-500' },
+  away:       { label: 'Away',           emoji: '🌙', dotBg: 'bg-amber-400'   },
+  dnd:        { label: 'Do Not Disturb', emoji: '⛔', dotBg: 'bg-red-500'     },
+  in_meeting: { label: 'In a Meeting',   emoji: '📅', dotBg: 'bg-blue-500'    },
+  on_leave:   { label: 'On Leave',       emoji: '🏠', dotBg: 'bg-slate-400'   },
+  vacation:   { label: 'Vacation',       emoji: '✈️', dotBg: 'bg-purple-500'  },
+}
+
+export const UNAVAILABLE_STATUSES: UserStatus[] = ['on_leave', 'vacation']
 
 export const ROLE_LABELS: Record<Role, string> = {
   super_admin: 'Super Admin',
@@ -12,6 +24,22 @@ export interface Profile {
   full_name: string
   email: string
   role: Role
+  user_status?: UserStatus
+  status_from?: string | null
+  status_until?: string | null
+}
+
+export function formatStatusSub(
+  status: UserStatus,
+  from?: string | null,
+  until?: string | null,
+): string | null {
+  const fmt = (d: string) =>
+    new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  if (status === 'vacation' && from && until) return `${fmt(from)} – ${fmt(until)}`
+  if (status === 'on_leave' && from) return until ? `${fmt(from)} – ${fmt(until)}` : `from ${fmt(from)}`
+  if (status === 'in_meeting' && from) return fmt(from)
+  return null
 }
 
 export interface Project {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Profile, Role, ROLE_LABELS } from '@/types'
+import { Profile, Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
 import { createUser, updateUserRole, deleteUser, resetUserPassword, updateUserProfile } from '@/app/actions/users'
 
 interface Props {
@@ -295,8 +295,20 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
               <div className={`grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_140px_160px] gap-4 items-center px-5 py-4 ${isSelf ? 'bg-brand-50/30' : 'hover:bg-slate-50'} transition-colors`}>
                 {/* Avatar + name */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${AVATAR_BG[member.role]}`}>
-                    {initials(member.full_name)}
+                  <div className="relative shrink-0 group/status">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${AVATAR_BG[member.role]}`}>
+                      {initials(member.full_name)}
+                    </div>
+                    <span className="absolute -bottom-1 -right-1 flex items-center justify-center w-4 h-4 bg-white rounded-full text-[9px] leading-none shadow-sm ring-1 ring-slate-100">
+                      {USER_STATUS_CONFIG[(member.user_status ?? 'active') as UserStatus].emoji}
+                    </span>
+                    <div className="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/status:opacity-100 transition-opacity z-20">
+                      {USER_STATUS_CONFIG[(member.user_status ?? 'active') as UserStatus].label}
+                      {(() => {
+                        const sub = formatStatusSub((member.user_status ?? 'active') as UserStatus, member.status_from, member.status_until)
+                        return sub ? ` · ${sub}` : ''
+                      })()}
+                    </div>
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">

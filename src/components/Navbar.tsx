@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useRef, useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Role, ROLE_LABELS } from '@/types'
+import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
 
 const initials = (name: string) => {
   const p = name.trim().split(/\s+/)
@@ -16,19 +16,50 @@ interface Props {
   userName: string
   userRole: Role
   userId: string
+  userStatus: UserStatus
+  statusFrom: string | null
+  statusUntil: string | null
 }
 
-export default function Navbar({ userName, userRole, userId }: Props) {
+const TODAY = new Date().toISOString().split('T')[0]
+
+export default function Navbar({ userName, userRole, userId, userStatus, statusFrom, statusUntil }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [status, setStatus] = useState<UserStatus>(userStatus)
+  const [from, setFrom] = useState(statusFrom ?? '')
+  const [until, setUntil] = useState(statusUntil ?? '')
+  const [pendingStatus, setPendingStatus] = useState<UserStatus | null>(null)
+  const [pendingFrom, setPendingFrom] = useState(TODAY)
+  const [pendingUntil, setPendingUntil] = useState(TODAY)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const supabase = createClient()
 
   async function signOut() {
-    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
+  }
+
+  async function applyStatus(s: UserStatus, f: string | null, u: string | null) {
+    setStatus(s)
+    setFrom(f ?? '')
+    setUntil(u ?? '')
+    setPendingStatus(null)
+    await supabase.from('profiles').update({ user_status: s, status_from: f, status_until: u }).eq('id', userId)
+  }
+
+  function handleStatusClick(s: UserStatus) {
+    if (s === 'vacation' || s === 'on_leave') {
+      setPendingStatus(s)
+      setPendingFrom(TODAY)
+      setPendingUntil(TODAY)
+    } else if (s === 'in_meeting') {
+      applyStatus(s, TODAY, null)
+    } else {
+      applyStatus(s, null, null)
+    }
   }
 
   useEffect(() => {
@@ -85,8 +116,13 @@ export default function Navbar({ userName, userRole, userId }: Props) {
               onClick={() => setDropdownOpen(o => !o)}
               className="hidden sm:flex items-center gap-2 pl-2 ml-1 border-l border-slate-200 hover:bg-slate-50 rounded-lg px-2 py-1.5 transition-colors"
             >
-              <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-                <span className="text-brand-700 text-xs font-bold">{initials(userName)}</span>
+              <div className="relative w-7 h-7 shrink-0">
+                <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center">
+                  <span className="text-brand-700 text-xs font-bold">{initials(userName)}</span>
+                </div>
+                <span className="absolute -bottom-1 -right-1 flex items-center justify-center w-4 h-4 bg-white rounded-full text-[9px] leading-none shadow-sm ring-1 ring-slate-100" title={USER_STATUS_CONFIG[status].label}>
+                  {USER_STATUS_CONFIG[status].emoji}
+                </span>
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-slate-800 leading-none">{userName}</p>
@@ -98,28 +134,89 @@ export default function Navbar({ userName, userRole, userId }: Props) {
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 top-12 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
-                <Link
-                  href="/profile"
-                  prefetch
-                  onClick={() => setDropdownOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                  </svg>
-                  My Profile
-                </Link>
-                <div className="border-t border-slate-100 my-1" />
-                <button
-                  onClick={signOut}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-                  </svg>
-                  Sign out
-                </button>
+              <div className="absolute right-0 top-12 w-60 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                {/* Status picker */}
+                <div className="px-2 pt-2 pb-1.5">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-2 mb-1">Set Status</p>
+                  {(Object.keys(USER_STATUS_CONFIG) as UserStatus[]).map(s => {
+                    const isCurrent = status === s && !pendingStatus
+                    const isPending = pendingStatus === s
+                    return (
+                      <button key={s} onClick={() => handleStatusClick(s)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors text-left ${
+                          isCurrent || isPending ? 'bg-slate-100 text-slate-900 font-medium' : 'text-slate-600 hover:bg-slate-50'
+                        }`}>
+                        <span className="text-base leading-none">{USER_STATUS_CONFIG[s].emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="block">{USER_STATUS_CONFIG[s].label}</span>
+                          {isCurrent && !pendingStatus && (() => {
+                            const sub = formatStatusSub(s, from, until)
+                            return sub ? <span className="text-[10px] text-slate-400 font-normal">{sub}</span> : null
+                          })()}
+                        </div>
+                        {isCurrent && !pendingStatus && <span className="text-brand-500 text-xs shrink-0">✓</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Date picker for vacation / on_leave */}
+                {pendingStatus && (
+                  <div className="border-t border-slate-100 bg-slate-50 px-3 py-3 space-y-2.5">
+                    <p className="text-xs font-semibold text-slate-700">
+                      {USER_STATUS_CONFIG[pendingStatus].emoji} {USER_STATUS_CONFIG[pendingStatus].label} dates
+                    </p>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-medium">Start date</label>
+                      <input type="date" value={pendingFrom} onChange={e => setPendingFrom(e.target.value)}
+                        className="mt-1 w-full px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-medium">
+                        End date{pendingStatus === 'on_leave' ? ' (optional)' : ''}
+                      </label>
+                      <input type="date" value={pendingUntil} onChange={e => setPendingUntil(e.target.value)}
+                        min={pendingFrom}
+                        className="mt-1 w-full px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                    </div>
+                    <div className="flex gap-2 pt-0.5">
+                      <button
+                        onClick={() => applyStatus(pendingStatus, pendingFrom, pendingUntil || null)}
+                        disabled={pendingStatus === 'vacation' && (!pendingFrom || !pendingUntil)}
+                        className="flex-1 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 disabled:opacity-40 transition-colors">
+                        Confirm
+                      </button>
+                      <button onClick={() => setPendingStatus(null)}
+                        className="px-3 py-1.5 border border-slate-200 text-xs rounded-lg hover:bg-white text-slate-600 transition-colors">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t border-slate-100" />
+                <div className="py-1">
+                  <Link
+                    href="/profile"
+                    prefetch
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    My Profile
+                  </Link>
+                  <button
+                    onClick={signOut}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Sign out
+                  </button>
+                </div>
               </div>
             )}
           </div>

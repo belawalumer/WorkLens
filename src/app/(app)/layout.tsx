@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Navbar from '@/components/Navbar'
-import { Role } from '@/types'
+import { Role, UserStatus } from '@/types'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, role')
+    .select('full_name, role, user_status, status_from, status_until')
     .eq('id', user.id)
     .single()
 
@@ -20,6 +20,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         userName={profile?.full_name ?? user.email ?? ''}
         userRole={(profile?.role as Role) ?? 'developer'}
         userId={user.id}
+        userStatus={(profile?.user_status as UserStatus) ?? 'active'}
+        statusFrom={profile?.status_from ?? null}
+        statusUntil={profile?.status_until ?? null}
       />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</main>
     </div>
