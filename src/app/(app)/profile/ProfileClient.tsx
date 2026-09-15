@@ -2,25 +2,20 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, DeveloperRole, Project, ROLE_LABELS, Role } from '@/types'
+import { Profile, ROLE_LABELS, Role } from '@/types'
 
 interface Props {
   profile: Profile | null
-  roles: DeveloperRole[]
-  projects: Project[]
   userId: string
 }
 
 const inputCls = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-colors bg-white'
 const disabledCls = 'w-full px-3 py-2.5 border border-slate-100 rounded-xl text-sm bg-slate-50 text-slate-400'
 
-export default function ProfileClient({ profile, roles: initRoles, projects, userId }: Props) {
+export default function ProfileClient({ profile, userId }: Props) {
   const [fullName, setFullName] = useState(profile?.full_name ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [roles, setRoles] = useState(initRoles)
-  const [newRole, setNewRole] = useState({ project_id: '', title: '' })
-  const [addingRole, setAddingRole] = useState(false)
 
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -54,24 +49,6 @@ export default function ProfileClient({ profile, roles: initRoles, projects, use
     setTimeout(() => setPwdSaved(false), 3000)
   }
 
-  async function addRole(e: React.FormEvent) {
-    e.preventDefault()
-    if (!newRole.project_id || !newRole.title.trim()) return
-    const { data } = await supabase
-      .from('developer_roles')
-      .upsert({ developer_id: userId, project_id: newRole.project_id, title: newRole.title.trim() }, { onConflict: 'developer_id,project_id' })
-      .select('*, project:projects(id, name)')
-      .single()
-    if (data) setRoles(prev => [...prev.filter(r => r.project_id !== data.project_id), data])
-    setNewRole({ project_id: '', title: '' })
-    setAddingRole(false)
-  }
-
-  async function deleteRole(id: string) {
-    await supabase.from('developer_roles').delete().eq('id', id)
-    setRoles(prev => prev.filter(r => r.id !== id))
-  }
-
   return (
     <div className="page-enter space-y-6">
       {/* Header */}
@@ -91,8 +68,8 @@ export default function ProfileClient({ profile, roles: initRoles, projects, use
         </div>
       </div>
 
-      {/* 3-column row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* 2-column row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Basic Info */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2">
@@ -163,71 +140,6 @@ export default function ProfileClient({ profile, roles: initRoles, projects, use
               </button>
             </div>
           </form>
-        </div>
-
-        {/* Project Roles */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
-                  <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/><path d="M8 7V5a2 2 0 0 0-4 0v2"/>
-                </svg>
-              </div>
-              <h2 className="font-semibold text-slate-800">Project Roles</h2>
-            </div>
-            {!addingRole && (
-              <button onClick={() => setAddingRole(true)}
-                className="text-xs font-semibold text-brand-600 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 px-2.5 py-1 rounded-lg transition-colors">
-                + Add
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2 flex-1">
-            {roles.map(role => (
-              <div key={role.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5 group">
-                <div>
-                  <p className="text-sm font-medium text-slate-800">{role.title}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{role.project?.name}</p>
-                </div>
-                <button onClick={() => deleteRole(role.id)}
-                  className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-            ))}
-
-            {roles.length === 0 && !addingRole && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center py-8 border-2 border-dashed border-slate-100 rounded-xl">
-                <p className="text-sm text-slate-400">No project roles yet</p>
-                <p className="text-xs text-slate-300 mt-1">Add one to appear on team cards</p>
-              </div>
-            )}
-
-            {addingRole && (
-              <form onSubmit={addRole} className="space-y-2 mt-1">
-                <select value={newRole.project_id} onChange={e => setNewRole(r => ({ ...r, project_id: e.target.value }))} required className={inputCls}>
-                  <option value="">Select project</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <input type="text" placeholder="e.g. Senior Backend Developer" value={newRole.title}
-                  onChange={e => setNewRole(r => ({ ...r, title: e.target.value }))} required className={inputCls} />
-                <div className="flex gap-2">
-                  <button type="submit"
-                    className="flex-1 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors">
-                    Save
-                  </button>
-                  <button type="button" onClick={() => setAddingRole(false)}
-                    className="flex-1 py-2 border border-slate-200 text-sm text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
         </div>
       </div>
     </div>

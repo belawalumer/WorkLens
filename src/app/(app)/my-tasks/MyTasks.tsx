@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Task, Project } from '@/types'
+import { Task } from '@/types'
 
 const TODAY = new Date().toISOString().split('T')[0]
 
@@ -29,7 +29,6 @@ const DAY_LABEL = (date: string) =>
 
 interface Props {
   initialTasks: Task[]
-  projects: Project[]
   userId: string
 }
 
@@ -41,15 +40,12 @@ interface EstimateEdit {
   reasonError: boolean
 }
 
-export default function MyTasks({ initialTasks, projects, userId }: Props) {
+export default function MyTasks({ initialTasks, userId }: Props) {
   const [tasks, setTasks] = useState(initialTasks)
   const [view, setView] = useState<'today' | 'week'>('today')
   const [adding, setAdding] = useState(false)
-  const [form, setForm] = useState({ title: '', estimated_hours: '1', project_id: '', task_date: TODAY })
+  const [form, setForm] = useState({ title: '', estimated_hours: '1', task_date: TODAY })
   const [saving, setSaving] = useState(false)
-  const [addProject, setAddProject] = useState('')
-  const [addingProject, setAddingProject] = useState(false)
-  const [projectList, setProjectList] = useState(projects)
   const [estimateEdit, setEstimateEdit] = useState<EstimateEdit | null>(null)
   const [activeDay, setActiveDay] = useState(TODAY)
   const supabase = createClient()
@@ -78,10 +74,9 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
       developer_id: userId,
       title: form.title.trim(),
       estimated_hours: parseFloat(form.estimated_hours) || 1,
-      project_id: form.project_id || null,
       task_date: date,
     })
-    setForm({ title: '', estimated_hours: '1', project_id: '', task_date: TODAY })
+    setForm({ title: '', estimated_hours: '1', task_date: TODAY })
     setAdding(false)
     setSaving(false)
   }
@@ -94,18 +89,6 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
   async function deleteTask(id: string) {
     setTasks(prev => prev.filter(t => t.id !== id))
     await supabase.from('tasks').delete().eq('id', id)
-  }
-
-  async function createProject(e: React.FormEvent) {
-    e.preventDefault()
-    if (!addProject.trim()) return
-    const { data } = await supabase.from('projects').insert({ name: addProject.trim() }).select().single()
-    if (data) {
-      setProjectList(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
-      setForm(f => ({ ...f, project_id: data.id }))
-    }
-    setAddProject('')
-    setAddingProject(false)
   }
 
   function openEstimateEdit(task: Task) {
@@ -135,7 +118,6 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
   const doneToday = todayTasks.filter(t => t.completed).reduce((s, t) => s + t.estimated_hours, 0)
   const freeToday = Math.max(0, 8 - totalToday)
 
-  const visibleDates = view === 'today' ? [TODAY] : WEEKDAYS
   const displayDate = view === 'today' ? TODAY : activeDay
 
   const inputCls = 'w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-colors bg-slate-50'
@@ -154,7 +136,7 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
               ✅ {doneToday.toFixed(1)}h done
             </span>
             <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${freeToday > 2 ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>
-              🔵 {freeToday.toFixed(1)}h free
+              🕐 {freeToday.toFixed(1)}h free
             </span>
           </div>
         </div>
@@ -207,36 +189,13 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
           <input autoFocus type="text" placeholder="What needs to be done?"
             value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
             className={inputCls} />
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
               <span className="text-xs text-slate-500 shrink-0">⏱</span>
               <input type="number" min="0.5" max="24" step="0.5" value={form.estimated_hours}
                 onChange={e => setForm(f => ({ ...f, estimated_hours: e.target.value }))}
                 className="w-14 text-sm focus:outline-none bg-transparent" />
               <span className="text-xs text-slate-500">h</span>
-            </div>
-            <div className="flex gap-1 flex-1 min-w-[180px]">
-              {addingProject ? (
-                <form onSubmit={createProject} className="flex gap-1 flex-1">
-                  <input autoFocus type="text" placeholder="Project name" value={addProject}
-                    onChange={e => setAddProject(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50" />
-                  <button type="submit" className="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-medium">Save</button>
-                  <button type="button" onClick={() => setAddingProject(false)} className="px-3 py-2 border border-slate-200 rounded-xl text-xs">✕</button>
-                </form>
-              ) : (
-                <>
-                  <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50">
-                    <option value="">No project</option>
-                    {projectList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <button type="button" onClick={() => setAddingProject(true)}
-                    className="px-2.5 border border-slate-200 rounded-xl text-sm hover:bg-slate-100 transition-colors" title="New project">
-                    + New
-                  </button>
-                </>
-              )}
             </div>
           </div>
           <div className="flex gap-2 pt-1">
@@ -285,8 +244,7 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
             ) : (
               <div className="space-y-2">
                 {dayTasks.map(task => (
-                  <div key={task.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden group hover:border-slate-300 transition-colors">
-                    {/* Task row */}
+                  <div key={task.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
                     <div className="flex items-center gap-3 px-4 py-3.5">
                       <button onClick={() => toggleDone(task)}
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
@@ -301,17 +259,11 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
                         <p className={`text-sm font-medium leading-snug ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                           {task.title}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {task.project && (
-                            <span className="text-xs text-slate-400">{task.project.name}</span>
-                          )}
-                          {task.estimate_change_reason && (
-                            <span className="text-[11px] text-amber-600">✏️ {task.estimate_change_reason}</span>
-                          )}
-                        </div>
+                        {task.estimate_change_reason && (
+                          <span className="text-[11px] text-amber-600 mt-0.5 block">✏️ {task.estimate_change_reason}</span>
+                        )}
                       </div>
 
-                      {/* Hours — click to edit */}
                       <button
                         onClick={() => estimateEdit?.taskId === task.id ? setEstimateEdit(null) : openEstimateEdit(task)}
                         className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors shrink-0 ${
@@ -330,7 +282,6 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
                       </button>
                     </div>
 
-                    {/* Inline estimate edit */}
                     {estimateEdit?.taskId === task.id && (
                       <form onSubmit={saveEstimate} className="border-t border-slate-100 bg-slate-50 px-4 py-3 space-y-2.5">
                         <div className="flex items-center gap-2">
@@ -346,7 +297,7 @@ export default function MyTasks({ initialTasks, projects, userId }: Props) {
                             <label className="text-xs font-semibold text-slate-600 block mb-1">
                               Reason for change <span className="text-red-500">*</span>
                             </label>
-                            <textarea autoFocus rows={2}
+                            <textarea rows={2}
                               placeholder="Why are you changing the estimate?"
                               value={estimateEdit.reason}
                               onChange={e => setEstimateEdit(p => p ? { ...p, reason: e.target.value, reasonError: false } : null)}

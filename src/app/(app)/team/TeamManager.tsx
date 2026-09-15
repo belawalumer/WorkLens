@@ -146,11 +146,13 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
 
   const inputCls = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 bg-slate-50 transition-colors'
 
-  // Summary cards: super_admin sees all 3; others see only developer + hr_admin
+  // Summary cards based on role visibility
   const summaryCards = (
     currentUserRole === 'super_admin'
       ? [['developer', '💻', 'Developers'], ['hr_admin', '👔', 'HR Admins'], ['super_admin', '⭐', 'Super Admins']]
-      : [['developer', '💻', 'Developers'], ['hr_admin', '👔', 'HR Admins']]
+      : currentUserRole === 'hr_admin'
+        ? [['developer', '💻', 'Developers'], ['hr_admin', '👔', 'HR Admins']]
+        : [['developer', '💻', 'Developers']]
   ) as [Role, string, string][]
 
   return (
@@ -324,36 +326,53 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
                 <div className="hidden sm:flex items-center justify-end gap-1">
                   {manageable && !isEditingRole && (
                     <>
-                      {/* Edit profile (name/email) */}
-                      <button
-                        onClick={() => isEditingProfile
-                          ? setEditProfile(null)
-                          : setEditProfile({ userId: member.id, fullName: member.full_name, email: member.email, saving: false })
-                        }
-                        title="Edit profile"
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isEditingProfile ? 'text-brand-600 bg-brand-50' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      </button>
+                      {/* Edit profile */}
+                      <div className="relative group/tip">
+                        <button
+                          onClick={() => isEditingProfile
+                            ? setEditProfile(null)
+                            : setEditProfile({ userId: member.id, fullName: member.full_name, email: member.email, saving: false })
+                          }
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isEditingProfile ? 'text-brand-600 bg-brand-50' : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50'}`}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </button>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                          Edit profile
+                        </span>
+                      </div>
 
                       {/* Edit role — super_admin only */}
                       {currentUserRole === 'super_admin' && (
-                        <button onClick={() => { setEditingRoleId(member.id); setPendingRole(member.role) }}
-                          title="Edit role"
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </button>
+                        <div className="relative group/tip">
+                          <button onClick={() => { setEditingRoleId(member.id); setPendingRole(member.role) }}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                            Edit role
+                          </span>
+                        </div>
                       )}
 
-                      <button onClick={() => isResetting ? setResetState(null) : setResetState({ userId: member.id, password: generatePassword(), applied: false, applying: false })}
-                        title="Reset password"
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isResetting ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                      </button>
-                      <button onClick={() => handleDelete(member.id, member.full_name)}
-                        title="Remove member"
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                      </button>
+                      <div className="relative group/tip">
+                        <button onClick={() => isResetting ? setResetState(null) : setResetState({ userId: member.id, password: generatePassword(), applied: false, applying: false })}
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isResetting ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </button>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                          Reset password
+                        </span>
+                      </div>
+
+                      <div className="relative group/tip">
+                        <button onClick={() => handleDelete(member.id, member.full_name)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                          Delete
+                        </span>
+                      </div>
                     </>
                   )}
                 </div>
