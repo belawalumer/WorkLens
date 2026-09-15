@@ -103,11 +103,10 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     setSubmitting(true)
     try {
       await createUser({ ...form, password: generatedPassword })
-      mutateMembers(prev => [...(prev ?? []), { id: crypto.randomUUID(), full_name: form.fullName, email: form.email, role: form.role }]
-        .sort((a, b) => a.full_name.localeCompare(b.full_name)), false)
       setCreatedPassword(generatedPassword)
       setAdding(false)
       setForm(EMPTY_FORM)
+      mutateMembers() // revalidate to get real id from DB
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Failed to create user')
     } finally {
@@ -120,6 +119,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
       await updateUserRole(userId, pendingRole)
       mutateMembers(prev => (prev ?? []).map(m => m.id === userId ? { ...m, role: pendingRole } : m), false)
       setEditingRoleId(null)
+      mutateMembers()
     } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed') }
   }
 
@@ -128,6 +128,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     try {
       await deleteUser(userId)
       mutateMembers(prev => (prev ?? []).filter(m => m.id !== userId), false)
+      mutateMembers()
     } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed') }
   }
 
@@ -152,6 +153,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
       mutateMembers(prev => (prev ?? []).map(m => m.id === editProfile.userId
         ? { ...m, full_name: editProfile.fullName, email: editProfile.email } : m), false)
       setEditProfile(null)
+      mutateMembers()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed')
       setEditProfile(s => s ? { ...s, saving: false } : null)

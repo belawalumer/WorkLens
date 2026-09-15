@@ -80,25 +80,39 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     if (!form.title.trim()) return
     setSaving(true)
     const date = view === 'today' ? TODAY : activeDay
-    await supabase.from('tasks').insert({
+    const tempTask: Task = {
+      id: crypto.randomUUID(),
       developer_id: userId,
+      project_id: null,
       title: form.title.trim(),
       estimated_hours: parseFloat(form.estimated_hours) || 1,
+      completed: false,
       task_date: date,
-    })
+      estimate_change_reason: null,
+    }
+    mutateTasks(prev => [tempTask, ...(prev ?? [])], false)
     setForm({ title: '', estimated_hours: '1', task_date: TODAY })
     setAdding(false)
     setSaving(false)
+    await supabase.from('tasks').insert({
+      developer_id: userId,
+      title: tempTask.title,
+      estimated_hours: tempTask.estimated_hours,
+      task_date: date,
+    })
+    mutateTasks() // revalidate to replace temp id with real DB id
   }
 
   async function toggleDone(task: Task) {
     mutateTasks(prev => (prev ?? []).map(t => t.id === task.id ? { ...t, completed: !t.completed } : t), false)
     await supabase.from('tasks').update({ completed: !task.completed }).eq('id', task.id)
+    mutateTasks()
   }
 
   async function deleteTask(id: string) {
     mutateTasks(prev => (prev ?? []).filter(t => t.id !== id), false)
     await supabase.from('tasks').delete().eq('id', id)
+    mutateTasks()
   }
 
   async function saveTitleEdit(taskId: string, newTitle: string) {
@@ -107,6 +121,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     mutateTasks(prev => (prev ?? []).map(t => t.id === taskId ? { ...t, title: trimmed } : t), false)
     setEditingTitle(null)
     await supabase.from('tasks').update({ title: trimmed }).eq('id', taskId)
+    mutateTasks()
   }
 
   function openEstimateEdit(task: Task) {
@@ -128,6 +143,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     }
     mutateTasks(prev => (prev ?? []).map(t => t.id === estimateEdit!.taskId ? { ...t, ...update } : t), false)
     await supabase.from('tasks').update(update).eq('id', estimateEdit.taskId)
+    mutateTasks()
     setEstimateEdit(null)
   }
 

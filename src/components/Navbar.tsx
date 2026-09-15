@@ -28,6 +28,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const [status, setStatus] = useState<UserStatus>(userStatus)
   const [from, setFrom] = useState(statusFrom ?? '')
   const [until, setUntil] = useState(statusUntil ?? '')
@@ -37,10 +38,10 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
   const dropdownRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
-  async function signOut() {
-    await supabase.auth.signOut()
+  function signOut() {
+    setSigningOut(true)
+    supabase.auth.signOut().then(() => router.refresh())
     router.push('/login')
-    router.refresh()
   }
 
   async function applyStatus(s: UserStatus, f: string | null, u: string | null) {
@@ -210,7 +211,8 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
                   </Link>
                   <button
                     onClick={signOut}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    disabled={signingOut}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
@@ -251,9 +253,9 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
             )
           })}
           <div className="pt-2 border-t border-slate-100 mt-2">
-            <button onClick={signOut}
-              className="w-full text-left px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors font-medium">
-              Sign out
+            <button onClick={signOut} disabled={signingOut}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors font-medium disabled:opacity-50">
+              {signingOut ? 'Signing out…' : 'Sign out'}
             </button>
           </div>
         </div>

@@ -11,6 +11,7 @@ export default function LoginPage() {
   // const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
   const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -19,24 +20,23 @@ export default function LoginPage() {
     setLoading(true)
     const supabase = createClient()
     try {
-      // if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
-      // } else {
-      //   const { error } = await supabase.auth.signUp({
-      //     email,
-      //     password,
-      //     options: { data: { full_name: fullName } },
-      //   })
-      //   if (error) throw error
-      // }
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
+      setRedirecting(true)
       router.push('/')
-      router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
       setLoading(false)
     }
+  }
+
+  if (redirecting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-brand-50 via-white to-slate-100 gap-4">
+        <div className="w-10 h-10 rounded-full border-2 border-brand-200 border-t-brand-600 animate-spin" />
+        <p className="text-sm text-slate-500 font-medium">Signing you in…</p>
+      </div>
+    )
   }
 
   const inputCls = 'w-full px-3 py-2.5 border border-slate-300 rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-colors'
