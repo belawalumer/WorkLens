@@ -137,34 +137,35 @@ export default function MyTasks({ initialTasks, userId }: Props) {
   return (
     <div className="max-w-2xl mx-auto page-enter">
       {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 mb-5">
-        <div>
+      <div className="mb-5 space-y-3">
+        <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-bold text-slate-900">My Tasks</h1>
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
-              📅 {fmt(totalToday)}h planned
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">
-              ✅ {fmt(doneToday)}h done
-            </span>
-            <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${freeToday > 2 ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>
-              🕐 {fmt(freeToday)}h free
-            </span>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden text-sm shadow-sm">
+              {(['today', 'week'] as const).map(v => (
+                <button key={v} onClick={() => setView(v)}
+                  className={`px-3 py-1.5 font-medium transition-colors ${view === v ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}>
+                  {v === 'today' ? 'Today' : 'This Week'}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setAdding(a => !a)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm shadow-brand-200">
+              <span>+</span>
+              <span className="hidden sm:inline">Add task</span>
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden text-sm shadow-sm">
-            {(['today', 'week'] as const).map(v => (
-              <button key={v} onClick={() => setView(v)}
-                className={`px-3 py-1.5 font-medium transition-colors ${view === v ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}>
-                {v === 'today' ? 'Today' : 'This Week'}
-              </button>
-            ))}
-          </div>
-          <button onClick={() => setAdding(a => !a)}
-            className="px-3 py-1.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm shadow-brand-200">
-            + Add task
-          </button>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+            📅 {fmt(totalToday)}h planned
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+            ✅ {fmt(doneToday)}h done
+          </span>
+          <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${freeToday > 2 ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>
+            🕐 {fmt(freeToday)}h free
+          </span>
         </div>
       </div>
 
