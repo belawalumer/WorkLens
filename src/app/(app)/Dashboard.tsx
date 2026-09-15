@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import useSWR from 'swr'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -9,6 +9,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus } from '@/types'
 import DeveloperCard from '@/components/DeveloperCard'
+import { toast } from '@/lib/toast'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
 
@@ -164,7 +165,6 @@ export default function Dashboard({
 }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('today')
   const [filter, setFilter] = useState<FilterStatus>('all')
-  const [toast, setToast] = useState('')
   const supabase = createClient()
 
   const weekStart = useMemo(() => {
@@ -189,22 +189,17 @@ export default function Dashboard({
     { fallbackData: initRoles },
   )
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3500)
-  }, [])
-
   useEffect(() => {
     const channel = supabase
       .channel('workload-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
-        if (payload.eventType === 'INSERT') { showToast('📋 New task added'); mutateTasks(prev => [...(prev ?? []), payload.new as Task], false) }
+        if (payload.eventType === 'INSERT') { toast('📋 New task added'); mutateTasks(prev => [...(prev ?? []), payload.new as Task], false) }
         else if (payload.eventType === 'UPDATE') mutateTasks(prev => (prev ?? []).map(t => t.id === (payload.new as Task).id ? payload.new as Task : t), false)
         else if (payload.eventType === 'DELETE') mutateTasks(prev => (prev ?? []).filter(t => t.id !== (payload.old as Task).id), false)
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, payload => {
         mutateProfiles(prev => [...(prev ?? []), payload.new as Profile].sort((a, b) => a.full_name.localeCompare(b.full_name)), false)
-        showToast('👋 New team member joined')
+        toast('👋 New team member joined')
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, payload => {
         mutateProfiles(prev => (prev ?? []).map(p => p.id === (payload.new as Profile).id ? { ...p, ...payload.new as Profile } : p), false)
@@ -448,12 +443,6 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* ── Toast ──────────────────────────────────────────────────────── */}
-      {toast && (
-        <div className="fixed bottom-5 right-5 bg-slate-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg z-50">
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

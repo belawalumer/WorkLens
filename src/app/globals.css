@@ -38,3 +38,6 @@ button, select, a, [role="button"] {
 .page-enter {
   animation: fadeIn 0.18s ease-out;
 }
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out;
+}

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useRef, useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
+import { toast, queueToast } from '@/lib/toast'
 
 const initials = (name: string) => {
   const p = name.trim().split(/\s+/)
@@ -40,6 +41,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
 
   function signOut() {
     setSigningOut(true)
+    queueToast('Signed out successfully', 'info')
     supabase.auth.signOut().then(() => router.refresh())
     router.push('/login')
   }
@@ -50,6 +52,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
     setUntil(u ?? '')
     setPendingStatus(null)
     await supabase.from('profiles').update({ user_status: s, status_from: f, status_until: u }).eq('id', userId)
+    toast.success(`Status set to ${USER_STATUS_CONFIG[s].label}`)
   }
 
   function handleStatusClick(s: UserStatus) {

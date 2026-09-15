@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { queueToast } from '@/lib/toast'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -22,6 +23,7 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
+      queueToast('Welcome back!', 'success')
       setRedirecting(true)
       router.push('/')
     } catch (err: unknown) {

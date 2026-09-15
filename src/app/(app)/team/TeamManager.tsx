@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { Profile, Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
 import { createUser, updateUserRole, deleteUser, resetUserPassword, updateUserProfile } from '@/app/actions/users'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from '@/lib/toast'
 
 interface Props {
   members: Profile[]
@@ -106,7 +107,8 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
       setCreatedPassword(generatedPassword)
       setAdding(false)
       setForm(EMPTY_FORM)
-      mutateMembers() // revalidate to get real id from DB
+      mutateMembers()
+      toast.success('Member created')
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Failed to create user')
     } finally {
@@ -120,7 +122,8 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
       mutateMembers(prev => (prev ?? []).map(m => m.id === userId ? { ...m, role: pendingRole } : m), false)
       setEditingRoleId(null)
       mutateMembers()
-    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed') }
+      toast.success('Role updated')
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to update role') }
   }
 
   async function handleDelete(userId: string, name: string) {
@@ -129,7 +132,8 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
       await deleteUser(userId)
       mutateMembers(prev => (prev ?? []).filter(m => m.id !== userId), false)
       mutateMembers()
-    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed') }
+      toast.success('Member removed')
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to remove member') }
   }
 
   async function applyReset() {
@@ -138,8 +142,9 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     try {
       await resetUserPassword(resetState.userId, resetState.password)
       setResetState(s => s ? { ...s, applied: true, applying: false } : null)
+      toast.success('Password reset')
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed')
+      toast.error(err instanceof Error ? err.message : 'Failed to reset password')
       setResetState(s => s ? { ...s, applying: false } : null)
     }
   }
@@ -154,8 +159,9 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
         ? { ...m, full_name: editProfile.fullName, email: editProfile.email } : m), false)
       setEditProfile(null)
       mutateMembers()
+      toast.success('Profile updated')
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed')
+      toast.error(err instanceof Error ? err.message : 'Failed to update profile')
       setEditProfile(s => s ? { ...s, saving: false } : null)
     }
   }

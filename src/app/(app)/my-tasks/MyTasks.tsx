@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Task } from '@/types'
+import { toast } from '@/lib/toast'
 
 const TODAY = new Date().toISOString().split('T')[0]
 
@@ -100,7 +101,8 @@ export default function MyTasks({ initialTasks, userId }: Props) {
       estimated_hours: tempTask.estimated_hours,
       task_date: date,
     })
-    mutateTasks() // revalidate to replace temp id with real DB id
+    mutateTasks()
+    toast.success('Task added')
   }
 
   async function toggleDone(task: Task) {
@@ -113,6 +115,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     mutateTasks(prev => (prev ?? []).filter(t => t.id !== id), false)
     await supabase.from('tasks').delete().eq('id', id)
     mutateTasks()
+    toast.success('Task deleted')
   }
 
   async function saveTitleEdit(taskId: string, newTitle: string) {
@@ -122,6 +125,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     setEditingTitle(null)
     await supabase.from('tasks').update({ title: trimmed }).eq('id', taskId)
     mutateTasks()
+    toast.success('Task updated')
   }
 
   function openEstimateEdit(task: Task) {
@@ -145,6 +149,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     await supabase.from('tasks').update(update).eq('id', estimateEdit.taskId)
     mutateTasks()
     setEstimateEdit(null)
+    toast.success('Estimate updated')
   }
 
   const todayTasks = tasks.filter(t => t.task_date === TODAY)
@@ -297,11 +302,11 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                           <input
                             autoFocus
                             type="text"
-                            value={editingTitle.title}
+                            value={editingTitle!.title}
                             onChange={e => setEditingTitle(p => p ? { ...p, title: e.target.value } : null)}
-                            onBlur={() => saveTitleEdit(task.id, editingTitle.title)}
+                            onBlur={() => saveTitleEdit(task.id, editingTitle!.title)}
                             onKeyDown={e => {
-                              if (e.key === 'Enter') { e.preventDefault(); saveTitleEdit(task.id, editingTitle.title) }
+                              if (e.key === 'Enter') { e.preventDefault(); saveTitleEdit(task.id, editingTitle!.title) }
                               if (e.key === 'Escape') setEditingTitle(null)
                             }}
                             className="w-full text-sm font-medium text-slate-800 bg-transparent border-b border-brand-400 focus:outline-none pb-0.5"
@@ -349,23 +354,23 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                         <div className="flex items-center gap-2">
                           <label className="text-xs font-semibold text-slate-600 shrink-0">New estimate</label>
                           <input autoFocus type="number" min="0.5" max="24" step="0.5"
-                            value={estimateEdit.hours}
+                            value={estimateEdit!.hours}
                             onChange={e => setEstimateEdit(p => p ? { ...p, hours: e.target.value, reasonError: false } : null)}
                             className="w-20 px-2.5 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" />
                           <span className="text-xs text-slate-400">hours</span>
                         </div>
-                        {parseFloat(estimateEdit.hours) !== estimateEdit.originalHours && (
+                        {parseFloat(estimateEdit!.hours) !== estimateEdit!.originalHours && (
                           <div>
                             <label className="text-xs font-semibold text-slate-600 block mb-1">
                               Reason for change <span className="text-red-500">*</span>
                             </label>
                             <textarea rows={2}
                               placeholder="Why are you changing the estimate?"
-                              value={estimateEdit.reason}
+                              value={estimateEdit!.reason}
                               onChange={e => setEstimateEdit(p => p ? { ...p, reason: e.target.value, reasonError: false } : null)}
-                              className={`w-full px-2.5 py-1.5 border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white ${estimateEdit.reasonError ? 'border-red-400' : 'border-slate-200'}`}
+                              className={`w-full px-2.5 py-1.5 border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white ${estimateEdit!.reasonError ? 'border-red-400' : 'border-slate-200'}`}
                             />
-                            {estimateEdit.reasonError && <p className="text-xs text-red-500 mt-0.5">Reason is required when changing an estimate.</p>}
+                            {estimateEdit!.reasonError && <p className="text-xs text-red-500 mt-0.5">Reason is required when changing an estimate.</p>}
                           </div>
                         )}
                         <div className="flex gap-2">
