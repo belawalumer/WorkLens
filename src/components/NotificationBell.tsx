@@ -177,7 +177,7 @@ export default function NotificationBell({ userRole, userId }: { userRole: Role;
         </button>
 
         {open && (
-          <div className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+          <div className="fixed sm:absolute inset-x-3 sm:inset-x-auto right-3 sm:right-0 top-16 sm:top-12 sm:w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
               <span className="text-sm font-semibold text-slate-800">Notifications</span>
               {unread > 0 && (
