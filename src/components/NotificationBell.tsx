@@ -157,7 +157,11 @@ export default function NotificationBell({ userRole, userId }: { userRole: Role;
       {/* ── Bell button + dropdown ───────────────────────────────────────── */}
       <div className="relative" ref={panelRef}>
         <button
-          onClick={() => setOpen(o => !o)}
+          onClick={() => {
+            const next = !open
+            setOpen(next)
+            if (next && unread > 0) markAllRead()
+          }}
           className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-brand-50 transition-colors"
           aria-label="Notifications"
         >
