@@ -1,6 +1,6 @@
 'use client'
 
-import { DeveloperWithData, Role, ROLE_LABELS, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
+import { DeveloperWithData, Role, ROLE_LABELS, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, STATUS_CONFIG, formatStatusSub } from '@/types'
 import Link from 'next/link'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
@@ -80,6 +80,18 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">{primaryRole?.title ?? <>&nbsp;</>}</p>
         </div>
+
+        {/* Workload / user status tag */}
+        {isUnavailable ? (
+          <span className="shrink-0 self-start px-2 py-1 rounded-full text-[10px] font-semibold border bg-slate-50 text-slate-500 border-slate-200">
+            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].emoji}{' '}
+            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
+          </span>
+        ) : (
+          <span className={`shrink-0 self-start px-2 py-1 rounded-full text-[10px] font-semibold border ${STATUS_CONFIG[dev.status].bg} ${STATUS_CONFIG[dev.status].text} ${STATUS_CONFIG[dev.status].border}`}>
+            {STATUS_CONFIG[dev.status].emoji} {STATUS_CONFIG[dev.status].label}
+          </span>
+        )}
       </div>
 
       {/* ── Stats + bar (active devs) ─────────────────────────── */}

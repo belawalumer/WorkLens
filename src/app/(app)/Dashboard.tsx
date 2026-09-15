@@ -188,6 +188,9 @@ export default function Dashboard({
         setProfiles(prev => [...prev, payload.new as Profile].sort((a, b) => a.full_name.localeCompare(b.full_name)))
         showToast('👋 New team member joined')
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, payload => {
+        setProfiles(prev => prev.map(p => p.id === (payload.new as Profile).id ? { ...p, ...payload.new as Profile } : p))
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'developer_roles' }, async () => {
         const { data } = await supabase.from('developer_roles').select('*, project:projects(id, name)')
         if (data) setRoles(data)
@@ -373,7 +376,7 @@ export default function Dashboard({
                         const item = payload[0]
                         return (
                           <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xl text-xs">
-                            <p className="font-semibold text-slate-700">{item.name}</p>
+                            <p className="font-semibold text-slate-700">{item.payload?.label ?? item.name}</p>
                             <p className="text-slate-500">{String(item.value)} member{Number(item.value) !== 1 ? 's' : ''}</p>
                           </div>
                         )
