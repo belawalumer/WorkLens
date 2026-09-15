@@ -14,8 +14,3 @@ export const toast = Object.assign(
     error: (msg: string) => emit(msg, 'error'),
   }
 )
-
-export function queueToast(message: string, type: ToastType = 'info') {
-  if (typeof window !== 'undefined')
-    sessionStorage.setItem('__wl_toast', JSON.stringify({ message, type }))
-}

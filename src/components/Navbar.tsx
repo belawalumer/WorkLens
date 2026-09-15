@@ -6,7 +6,7 @@ import { useRef, useState, useEffect } from 'react'
 import { mutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
-import { toast, queueToast } from '@/lib/toast'
+import { toast } from '@/lib/toast'
 
 const initials = (name: string) => {
   const p = name.trim().split(/\s+/)
@@ -42,7 +42,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
 
   function signOut() {
     setSigningOut(true)
-    queueToast('Signed out successfully', 'info')
+    toast('Signed out successfully')
     supabase.auth.signOut().then(() => router.refresh())
     router.push('/login')
   }
