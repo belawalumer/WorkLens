@@ -138,6 +138,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
             {navLink('/', 'Dashboard')}
             {navLink('/my-tasks', 'My Tasks')}
             {navLink('/team', 'Team')}
+            {navLink('/projects', 'Projects')}
             {userRole === 'super_admin' && navLink('/reports', 'Reports')}
             {(userRole === 'super_admin' || userRole === 'hr_admin') && navLink('/settings', 'Settings')}
           </nav>
@@ -281,6 +282,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
             ['/', 'Dashboard'],
             ['/my-tasks', 'My Tasks'],
             ['/team', 'Team'],
+            ['/projects', 'Projects'],
             ...(userRole === 'super_admin' ? [['/reports', 'Reports']] : []),
             ...(userRole === 'super_admin' || userRole === 'hr_admin' ? [['/settings', 'Settings']] : []),
           ] as [string, string][]).map(([href, label]) => {

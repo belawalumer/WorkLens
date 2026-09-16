@@ -147,6 +147,11 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
                 <span className={`flex-1 truncate text-xs ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
                   {task.title}
                 </span>
+                {task.project?.name && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-50 text-brand-600 font-medium shrink-0 max-w-[72px] truncate">
+                    {task.project.name}
+                  </span>
+                )}
                 <span className="text-[11px] text-slate-500 shrink-0 tabular-nums">{fmt(task.estimated_hours)}h</span>
                 <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 px-2.5 py-1.5 text-xs bg-slate-800 text-white rounded-lg whitespace-normal max-w-[220px] opacity-0 group-hover/task:opacity-100 transition-opacity z-30 shadow-lg leading-snug">
                   {task.title}

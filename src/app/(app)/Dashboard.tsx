@@ -79,7 +79,7 @@ function StatCard({
         </p>
       )}
       {tooltip && tooltip.length > 0 && (
-        <div className="absolute bottom-full left-0 mb-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div className="absolute top-full left-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           <div className="space-y-1">
             {tooltip.map(t => (
               <div key={t.name} className="flex items-center justify-between gap-3 text-xs">
@@ -96,7 +96,7 @@ function StatCard({
 
 const STATUS_DISTRIBUTION: Record<WorkloadStatus, { label: string; color: string }> = {
   overloaded:  { label: 'Overloaded',  color: '#dc2626' },
-  full:        { label: 'Full Load',   color: '#16a34a' },
+  full:        { label: 'Occupied',   color: '#16a34a' },
   underloaded: { label: 'Underloaded', color: '#ca8a04' },
   available:   { label: 'Available',   color: '#0078b7' },
 }
@@ -308,14 +308,14 @@ export default function Dashboard({
       <div className="border-t border-slate-200 pt-5">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
-            {filter === 'all' ? 'All Members' : filter === 'available' ? 'Available' : filter === 'full' ? 'Full Load' : filter === 'underloaded' ? 'Underloaded' : 'Overloaded'}
+            {filter === 'all' ? 'All Members' : filter === 'available' ? 'Available' : filter === 'full' ? 'Occupied' : filter === 'underloaded' ? 'Underloaded' : 'Overloaded'}
             {' '}· {filtered.length}
           </h2>
           <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden text-sm shadow-sm">
             {([
               { key: 'all',        label: 'All' },
               { key: 'available',  label: 'Available' },
-              { key: 'full',       label: 'Full Load' },
+              { key: 'full',       label: 'Occupied' },
               { key: 'underloaded',label: 'Underloaded' },
               { key: 'overloaded', label: 'Overloaded' },
             ] as { key: FilterStatus; label: string }[]).map(t => (
