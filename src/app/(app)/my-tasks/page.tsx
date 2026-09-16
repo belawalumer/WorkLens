@@ -9,12 +9,13 @@ export default async function MyTasksPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: tasks } = await supabase
-    .from('tasks')
-    .select('*, project:projects(id, name)')
-    .eq('developer_id', user.id)
-    .order('task_date', { ascending: false })
-    .order('created_at', { ascending: false })
+  const [{ data: tasks }, { data: projects }] = await Promise.all([
+    supabase.from('tasks').select('*, project:projects(id, name)')
+      .eq('developer_id', user.id)
+      .order('task_date', { ascending: false })
+      .order('created_at', { ascending: false }),
+    supabase.from('projects').select('id, name').order('name'),
+  ])
 
-  return <MyTasks initialTasks={tasks ?? []} userId={user.id} />
+  return <MyTasks initialTasks={tasks ?? []} initialProjects={projects ?? []} userId={user.id} />
 }

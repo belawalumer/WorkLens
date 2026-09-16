@@ -17,10 +17,10 @@ function colLabel(date: string) {
   return new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-interface Props { initialTasks: Task[]; userId: string }
+interface Props { initialTasks: Task[]; initialProjects: { id: string; name: string }[]; userId: string }
 interface EstimateEdit { taskId: string; originalHours: number; hours: string; reason: string; reasonError: boolean }
 
-export default function MyTasks({ initialTasks, userId }: Props) {
+export default function MyTasks({ initialTasks, initialProjects, userId }: Props) {
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ title: '', estimated_hours: '1', task_date: TODAY, project_id: '' })
   const [saving, setSaving] = useState(false)
@@ -31,9 +31,10 @@ export default function MyTasks({ initialTasks, userId }: Props) {
   const [projectEdit, setProjectEdit] = useState<string | null>(null)
   const supabase = createClient()
 
-  const { data: projects = [] } = useSWR<{ id: string; name: string }[]>(
+  const { data: projects = initialProjects } = useSWR<{ id: string; name: string }[]>(
     'projects',
     async () => (await supabase.from('projects').select('id, name').order('name')).data ?? [],
+    { fallbackData: initialProjects },
   )
 
   const { data: tasks = initialTasks, mutate: mutateTasks } = useSWR(
