@@ -79,11 +79,11 @@ function StatCard({
         </p>
       )}
       {tooltip && tooltip.length > 0 && (
-        <div className="absolute top-full left-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           <div className="space-y-1">
             {tooltip.map(t => (
               <div key={t.name} className="flex items-center justify-between gap-3 text-xs">
-                <span className="text-slate-600 truncate">{t.name}</span>
+                <span className="text-slate-600">{t.name}</span>
                 <span className="font-semibold text-slate-800 shrink-0">{t.value}</span>
               </div>
             ))}
