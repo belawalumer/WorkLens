@@ -23,7 +23,7 @@ interface Props {
   todayHoliday?: string | null
 }
 
-type FilterStatus = 'all' | 'available' | 'overloaded'
+type FilterStatus = 'all' | 'available' | 'full' | 'underloaded' | 'overloaded'
 
 const TODAY = new Date().toISOString().split('T')[0]
 
@@ -152,7 +152,9 @@ export default function Dashboard({
   const activeDevs = developers.filter(d => !UNAVAILABLE_STATUSES.includes((d.user_status ?? 'active') as UserStatus))
 
   const filtered = filter === 'all' ? developers
-    : filter === 'available' ? activeDevs.filter(d => d.status === 'available' || d.status === 'underloaded')
+    : filter === 'available' ? activeDevs.filter(d => d.status === 'available')
+    : filter === 'full' ? activeDevs.filter(d => d.status === 'full')
+    : filter === 'underloaded' ? activeDevs.filter(d => d.status === 'underloaded')
     : activeDevs.filter(d => d.status === 'overloaded')
 
   const overloadedCount = activeDevs.filter(d => d.status === 'overloaded').length
@@ -198,23 +200,15 @@ export default function Dashboard({
     <div className="space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-slate-500">{greeting}, {firstName} 👋</p>
-          {isWeekend && (
-            <p className="text-xs text-brand-600 font-medium mt-0.5">{weekendMsg}</p>
-          )}
-          <h1 className="text-xl font-bold text-slate-900 mt-0.5">Team Dashboard</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </p>
-        </div>
-        <select value={filter} onChange={e => setFilter(e.target.value as FilterStatus)}
-          className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-300">
-          <option value="all">All members</option>
-          <option value="available">Has capacity</option>
-          <option value="overloaded">Overloaded</option>
-        </select>
+      <div>
+        <p className="text-sm text-slate-500">{greeting}, {firstName} 👋</p>
+        {isWeekend && (
+          <p className="text-xs text-brand-600 font-medium mt-0.5">{weekendMsg}</p>
+        )}
+        <h1 className="text-xl font-bold text-slate-900 mt-0.5">Team Dashboard</h1>
+        <p className="text-xs text-slate-500 mt-0.5">
+          {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        </p>
       </div>
 
       {/* ── Holiday banner ─────────────────────────────────────────────── */}
@@ -311,12 +305,28 @@ export default function Dashboard({
       )}
 
       {/* ── Member cards ─────────────────────────────────────────────── */}
-      <div>
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
-          {filter === 'all' ? 'All Members' : filter === 'available' ? 'Available Members' : 'Overloaded Members'}
-          {' '}· {filtered.length}
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="border-t border-slate-200 pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+            {filter === 'all' ? 'All Members' : filter === 'available' ? 'Available' : filter === 'full' ? 'Full Load' : filter === 'underloaded' ? 'Underloaded' : 'Overloaded'}
+            {' '}· {filtered.length}
+          </h2>
+          <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden text-sm shadow-sm">
+            {([
+              { key: 'all',        label: 'All' },
+              { key: 'available',  label: 'Available' },
+              { key: 'full',       label: 'Full Load' },
+              { key: 'underloaded',label: 'Underloaded' },
+              { key: 'overloaded', label: 'Overloaded' },
+            ] as { key: FilterStatus; label: string }[]).map(t => (
+              <button key={t.key} onClick={() => setFilter(t.key)}
+                className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${filter === t.key ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-h-96">
           {[...filtered].sort((a, b) => {
             if (a.id === currentUserId) return -1
             if (b.id === currentUserId) return 1
