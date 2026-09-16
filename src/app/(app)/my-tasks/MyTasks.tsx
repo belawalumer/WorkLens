@@ -50,7 +50,12 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
     const channel = supabase
       .channel('my-tasks')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks', filter: `developer_id=eq.${userId}` }, payload => {
-        mutateTasks(prev => (prev ?? []).map(t => t.id === (payload.new as Task).id ? payload.new as Task : t), false)
+        mutateTasks(prev => (prev ?? []).map(t => {
+          if (t.id !== (payload.new as Task).id) return t
+          const updated = payload.new as Task
+          // Realtime payloads are raw rows — no joins. Preserve the existing project object.
+          return { ...updated, project: updated.project ?? t.project }
+        }), false)
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tasks', filter: `developer_id=eq.${userId}` }, payload => {
         mutateTasks(prev => (prev ?? []).filter(t => t.id !== (payload.old as Task).id), false)
