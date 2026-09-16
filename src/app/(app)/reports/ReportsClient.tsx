@@ -112,7 +112,7 @@ export default function ReportsClient({ profiles, tasks }: Props) {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Reports</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Developer activity and workload history</p>
+          <p className="text-sm text-slate-500 mt-0.5">Developer activity and workload history</p>
         </div>
         <div className="relative">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -136,7 +136,7 @@ export default function ReportsClient({ profiles, tasks }: Props) {
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         {/* Table header */}
-        <div className="hidden sm:grid sm:grid-cols-[1fr_88px_72px_72px_120px_36px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+        <div className="hidden sm:grid sm:grid-cols-[1fr_88px_72px_72px_120px_36px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
           <span>Developer</span>
           <span className="text-right">Hours</span>
           <span className="text-right">Tasks</span>
@@ -178,14 +178,14 @@ export default function ReportsClient({ profiles, tasks }: Props) {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-800 truncate">{dev.full_name}</p>
-                    <p className="text-xs text-slate-400">{ROLE_LABELS[dev.role as Role]}</p>
+                    <p className="text-xs text-slate-500">{ROLE_LABELS[dev.role as Role]}</p>
                   </div>
                 </div>
 
                 {/* Mobile: hours only */}
                 <div className="sm:hidden text-right">
                   <p className="text-sm font-bold text-slate-800 tabular-nums">{fmt(s.hours)}h</p>
-                  <p className="text-[11px] text-slate-400">{s.total} tasks</p>
+                  <p className="text-[11px] text-slate-500">{s.total} tasks</p>
                 </div>
 
                 {/* Desktop columns */}
@@ -220,27 +220,27 @@ export default function ReportsClient({ profiles, tasks }: Props) {
                       { label: 'This Month', s: monthS },
                     ].map(({ label, s: st }) => (
                       <div key={label} className="bg-white border border-slate-200 rounded-xl px-4 py-3">
-                        <p className="text-[11px] text-slate-400 font-medium">{label}</p>
-                        <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">{fmt(st.hours)}<span className="text-sm font-semibold text-slate-400 ml-0.5">h</span></p>
-                        <p className="text-xs text-slate-400 mt-0.5">{st.total} tasks · {st.done} done</p>
+                        <p className="text-[11px] text-slate-600 font-semibold">{label}</p>
+                        <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">{fmt(st.hours)}<span className="text-sm font-semibold text-slate-500 ml-0.5">h</span></p>
+                        <p className="text-xs text-slate-600 mt-0.5">{st.total} tasks · {st.done} done</p>
                       </div>
                     ))}
                   </div>
 
                   {/* Monthly history */}
                   <div>
-                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-3">Monthly History</p>
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-3">Monthly History</p>
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                       {history.map(m => {
                         const maxH = Math.max(...history.map(x => x.hours), 1)
                         return (
                           <div key={m.label} className="bg-white border border-slate-200 rounded-xl p-3">
-                            <p className="text-[10px] text-slate-400 font-medium truncate">{m.label}</p>
-                            <p className="text-lg font-bold text-slate-800 tabular-nums mt-1">{fmt(m.hours)}<span className="text-xs text-slate-400 ml-0.5">h</span></p>
+                            <p className="text-[10px] text-slate-600 font-semibold truncate">{m.label}</p>
+                            <p className="text-lg font-bold text-slate-800 tabular-nums mt-1">{fmt(m.hours)}<span className="text-xs text-slate-500 ml-0.5">h</span></p>
                             <div className="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
                               <div className="h-full bg-brand-400 rounded-full" style={{ width: `${Math.round((m.hours / maxH) * 100)}%` }} />
                             </div>
-                            <p className="text-[10px] text-slate-400 mt-1.5">{m.tasks} tasks · {m.pct}% done</p>
+                            <p className="text-[10px] text-slate-600 mt-1.5">{m.tasks} tasks · {m.pct}% done</p>
                           </div>
                         )
                       })}
@@ -250,7 +250,7 @@ export default function ReportsClient({ profiles, tasks }: Props) {
                   {/* Task list */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                         Tasks — {PERIODS.find(p => p.key === period)?.label}
                       </p>
                       <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden text-xs shadow-sm">
@@ -267,7 +267,7 @@ export default function ReportsClient({ profiles, tasks }: Props) {
                       <p className="text-sm text-slate-400 text-center py-8 bg-white border border-slate-200 rounded-xl">No tasks for this period.</p>
                     ) : (
                       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                        <div className="hidden sm:grid sm:grid-cols-[16px_1fr_140px_80px_60px] gap-3 px-4 py-2 bg-slate-50 border-b border-slate-100 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                        <div className="hidden sm:grid sm:grid-cols-[16px_1fr_140px_80px_60px] gap-3 px-4 py-2 bg-slate-50 border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
                           <span/>
                           <span>Task</span>
                           <span>Project</span>
@@ -282,10 +282,10 @@ export default function ReportsClient({ profiles, tasks }: Props) {
                                 <p className={`text-xs truncate ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`} title={task.title}>
                                   {task.title}
                                 </p>
-                                <p className="text-[10px] text-slate-400 sm:hidden">{task.project?.name ?? '—'} · {new Date(task.task_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                                <p className="text-[10px] text-slate-500 sm:hidden">{task.project?.name ?? '—'} · {new Date(task.task_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                               </div>
-                              <p className="hidden sm:block text-xs text-slate-400 truncate">{task.project?.name ?? '—'}</p>
-                              <p className="hidden sm:block text-xs text-slate-400 text-right">
+                              <p className="hidden sm:block text-xs text-slate-500 truncate">{task.project?.name ?? '—'}</p>
+                              <p className="hidden sm:block text-xs text-slate-500 text-right">
                                 {new Date(task.task_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </p>
                               <p className="text-xs font-semibold text-slate-700 text-right tabular-nums">{fmt(task.estimated_hours)}h</p>

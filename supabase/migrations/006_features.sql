@@ -102,8 +102,8 @@ DROP POLICY IF EXISTS "manage holidays" ON public_holidays;
 CREATE POLICY "read holidays" ON public_holidays FOR SELECT USING (true);
 CREATE POLICY "manage holidays" ON public_holidays
   FOR ALL
-  USING     (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'))
-  WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+  USING     (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'hr_admin')))
+  WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'hr_admin')));
 
 -- holiday_assignments
 DROP POLICY IF EXISTS "read assignments"   ON holiday_assignments;

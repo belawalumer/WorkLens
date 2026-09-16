@@ -223,7 +223,6 @@ export default function Dashboard({
           <span className="text-xl shrink-0">🎉</span>
           <div>
             <p className="text-sm font-semibold text-brand-800">Public Holiday: {todayHoliday}</p>
-            <p className="text-xs text-brand-600 mt-0.5">No task logging expected today.</p>
           </div>
         </div>
       )}

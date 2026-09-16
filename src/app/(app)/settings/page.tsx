@@ -10,19 +10,12 @@ export default async function SettingsPage() {
   if (!user) redirect('/login')
 
   const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (me?.role !== 'super_admin') redirect('/')
+  if (!['super_admin', 'hr_admin'].includes(me?.role ?? '')) redirect('/')
 
-  const [{ data: settings }, { data: holidays }] = await Promise.all([
-    supabase.from('app_settings').select('key, value'),
-    supabase.from('public_holidays').select('id, holiday_date, name').order('holiday_date', { ascending: false }),
-  ])
+  const { data: holidays } = await supabase
+    .from('public_holidays')
+    .select('id, holiday_date, name')
+    .order('holiday_date', { ascending: false })
 
-  const map = Object.fromEntries((settings ?? []).map(s => [s.key, s.value]))
-
-  return (
-    <SettingsClient
-      leverageHours={parseFloat(map['leverage_hours'] ?? '176')}
-      initialHolidays={holidays ?? []}
-    />
-  )
+  return <SettingsClient initialHolidays={holidays ?? []} />
 }
