@@ -90,5 +90,5 @@ export const STATUS_CONFIG: Record<WorkloadStatus, { label: string; emoji: strin
   overloaded:  { label: 'Overloaded',  emoji: '🔴', bg: 'bg-red-50',     text: 'text-red-700',    border: 'border-red-200',    solid: '#dc2626' },
   full:        { label: 'Occupied',    emoji: '🔵', bg: 'bg-brand-50',   text: 'text-brand-700',  border: 'border-brand-200',  solid: '#0078b7' },
   underloaded: { label: 'Underloaded', emoji: '🟡', bg: 'bg-amber-50',   text: 'text-amber-700',  border: 'border-amber-200',  solid: '#d97706' },
-  available:   { label: 'Available',   emoji: '🟢', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', solid: '#059669' },
+  available:   { label: 'Available',   emoji: '🟢', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', solid: '#25D366' },
 }

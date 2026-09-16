@@ -98,7 +98,7 @@ const STATUS_DISTRIBUTION: Record<WorkloadStatus, { label: string; color: string
   overloaded:  { label: 'Overloaded',  color: '#dc2626' },
   full:        { label: 'Occupied',   color: '#0078b7' },
   underloaded: { label: 'Underloaded', color: '#ca8a04' },
-  available:   { label: 'Available',   color: '#059669' },
+  available:   { label: 'Available',   color: '#25D366' },
 }
 
 // ─── Main component ────────────────────────────────────────────────────────────
