@@ -142,11 +142,13 @@ export default function Dashboard({
   const avgLoad = activeDevs.length > 0 ? totalPlanned / activeDevs.length : 0
 
   // Inactive today — derived from SWR data, auto-updates when tasks/profiles change
-  const inactiveToday = developers.filter(d =>
-    d.role !== 'super_admin' &&
-    d.tasks.length === 0 &&
-    !UNAVAILABLE_STATUSES.includes((d.user_status ?? 'active') as UserStatus)
-  )
+  const inactiveToday = developers.filter(d => {
+    if (d.tasks.length > 0) return false
+    if (UNAVAILABLE_STATUSES.includes((d.user_status ?? 'active') as UserStatus)) return false
+    if (currentUserRole === 'developer') return d.role === 'developer'
+    if (currentUserRole === 'hr_admin') return d.role !== 'super_admin'
+    return true
+  })
 
   function buildWhatsAppUrl(dev: DeveloperWithData) {
     const msg = encodeURIComponent(
