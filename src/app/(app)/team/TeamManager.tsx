@@ -171,6 +171,9 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     : members
 
   const inputCls = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 bg-slate-50 transition-colors'
+  const gridCls = currentUserRole === 'developer'
+    ? 'grid-cols-[1fr_auto] sm:grid-cols-[1fr_140px]'
+    : 'grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_140px_160px]'
 
   // Summary cards based on role visibility
   const summaryCards = (
@@ -299,10 +302,12 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
 
       {/* ── Members table ───────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_140px_160px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200">
+        <div className={`grid ${gridCls} gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200`}>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Member</span>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide text-right sm:text-left">Role</span>
-          <span className="hidden sm:block text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Actions</span>
+          {currentUserRole !== 'developer' && (
+            <span className="hidden sm:block text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Actions</span>
+          )}
         </div>
 
         {filtered.length === 0 && (
@@ -318,7 +323,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
 
           return (
             <div key={member.id} className={i < filtered.length - 1 ? 'border-b border-slate-100' : ''}>
-              <div className={`grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_140px_160px] gap-4 items-center px-5 py-4 ${isSelf ? 'bg-brand-50/30' : 'hover:bg-slate-50'} transition-colors`}>
+              <div className={`grid ${gridCls} gap-4 items-center px-5 py-4 ${isSelf ? 'bg-brand-50/30' : 'hover:bg-slate-50'} transition-colors`}>
                 {/* Avatar + name */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative shrink-0 group/status">
@@ -376,7 +381,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
                 </div>
 
                 {/* Actions */}
-                <div className="hidden sm:flex items-center justify-end gap-1">
+                <div className={`${currentUserRole === 'developer' ? 'hidden' : 'hidden sm:flex'} items-center justify-end gap-1`}>
                   {manageable && !isEditingRole && (
                     <>
                       {/* Edit profile */}

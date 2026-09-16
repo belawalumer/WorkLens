@@ -20,6 +20,7 @@ interface Props {
   tasks: Task[]
   currentUserId: string
   currentUserRole: Role
+  todayHoliday?: string | null
 }
 
 type FilterStatus = 'all' | 'available' | 'overloaded'
@@ -103,7 +104,7 @@ const STATUS_DISTRIBUTION: Record<WorkloadStatus, { label: string; color: string
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function Dashboard({
-  profiles: initProfiles, roles: initRoles, tasks: initTasks, currentUserId, currentUserRole,
+  profiles: initProfiles, roles: initRoles, tasks: initTasks, currentUserId, currentUserRole, todayHoliday,
 }: Props) {
   const [filter, setFilter] = useState<FilterStatus>('all')
   const supabase = createClient()
@@ -216,6 +217,17 @@ export default function Dashboard({
         </select>
       </div>
 
+      {/* ── Holiday banner ─────────────────────────────────────────────── */}
+      {todayHoliday && (
+        <div className="bg-brand-50 border border-brand-200 rounded-2xl px-5 py-3 flex items-center gap-3">
+          <span className="text-xl shrink-0">🎉</span>
+          <div>
+            <p className="text-sm font-semibold text-brand-800">Public Holiday: {todayHoliday}</p>
+            <p className="text-xs text-brand-600 mt-0.5">No task logging expected today.</p>
+          </div>
+        </div>
+      )}
+
       {/* ── Stat cards ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Team Members" value={developers.length} accent="purple" />
@@ -269,7 +281,7 @@ export default function Dashboard({
       )}
 
       {/* ── Hasn't added today's tasks ──────────────────────────────── */}
-      {isPKTAfterNoon() && inactiveToday.length > 0 && (
+      {!todayHoliday && isPKTAfterNoon() && inactiveToday.length > 0 && (
         <div>
           <h2 className="text-xs font-semibold text-amber-600 uppercase tracking-widest mb-3">
             ⚠️ No Tasks Today · {inactiveToday.length}
