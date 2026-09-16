@@ -233,7 +233,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
               <span className="text-xs text-slate-500 shrink-0">⏱</span>
-              <input type="number" min="0.5" max="24" step="0.5" value={form.estimated_hours}
+              <input type="number" min="0.05" max="24" step="0.05" value={form.estimated_hours}
                 onChange={e => setForm(f => ({ ...f, estimated_hours: e.target.value }))}
                 className="w-14 text-sm focus:outline-none bg-transparent" />
               <span className="text-xs text-slate-500">h</span>
@@ -354,7 +354,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                       <form onSubmit={saveEstimate} className="border-t border-slate-100 bg-slate-50 px-4 py-3 space-y-2.5">
                         <div className="flex items-center gap-2">
                           <label className="text-xs font-semibold text-slate-600 shrink-0">New estimate</label>
-                          <input autoFocus type="number" min="0.5" max="24" step="0.5"
+                          <input autoFocus type="number" min="0.05" max="24" step="0.05"
                             value={estimateEdit!.hours}
                             onChange={e => setEstimateEdit(p => p ? { ...p, hours: e.target.value, reasonError: false } : null)}
                             className="w-20 px-2.5 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" />
