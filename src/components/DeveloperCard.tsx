@@ -83,13 +83,14 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
 
         {/* Workload / user status tag */}
         {isUnavailable ? (
-          <span className="shrink-0 self-start px-2 py-1 rounded-full text-[10px] font-semibold border bg-slate-50 text-slate-500 border-slate-200">
-            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].emoji}{' '}
+          <span className="shrink-0 self-start flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border bg-slate-50 text-slate-500 border-slate-200">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].dotBg}`} />
             {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
           </span>
         ) : (
-          <span className={`shrink-0 self-start px-2 py-1 rounded-full text-[10px] font-semibold border ${STATUS_CONFIG[dev.status].bg} ${STATUS_CONFIG[dev.status].text} ${STATUS_CONFIG[dev.status].border}`}>
-            {STATUS_CONFIG[dev.status].emoji} {STATUS_CONFIG[dev.status].label}
+          <span className={`shrink-0 self-start flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border ${STATUS_CONFIG[dev.status].bg} ${STATUS_CONFIG[dev.status].text} ${STATUS_CONFIG[dev.status].border}`}>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: STATUS_CONFIG[dev.status].solid }} />
+            {STATUS_CONFIG[dev.status].label}
           </span>
         )}
       </div>
@@ -124,8 +125,8 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
         </>
       ) : (
         <div className="px-4 py-3 border-t border-slate-100">
-          <p className="text-xs text-slate-500">
-            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].emoji}{' '}
+          <p className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].dotBg}`} />
             {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
             {(() => {
               const sub = formatStatusSub(dev.user_status as UserStatus, dev.status_from, dev.status_until)
