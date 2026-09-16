@@ -388,7 +388,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
                 </div>
 
                 {/* Actions */}
-                <div className={`${currentUserRole === 'developer' ? 'hidden' : 'hidden sm:flex'} items-center justify-end gap-1`}>
+                <div className={`${currentUserRole === 'developer' ? 'hidden' : 'flex sm:justify-end'} items-center gap-1 flex-wrap mt-3 sm:mt-0`}>
                   {manageable && !isEditingRole && (
                     <>
                       {/* Edit profile */}

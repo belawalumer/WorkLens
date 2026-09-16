@@ -29,6 +29,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
   const [estimateEdit, setEstimateEdit] = useState<EstimateEdit | null>(null)
   const [editingTitle, setEditingTitle] = useState<{ taskId: string; title: string } | null>(null)
   const [projectEdit, setProjectEdit] = useState<string | null>(null)
+  const [projectEditPos, setProjectEditPos] = useState<{ top: number; left: number } | null>(null)
   const supabase = createClient()
 
   const { data: projects = initialProjects } = useSWR<{ id: string; name: string }[]>(
@@ -131,10 +132,22 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
     toast.success('Task updated')
   }
 
+  function openProjectEdit(e: React.MouseEvent<HTMLButtonElement>, taskId: string) {
+    if (projectEdit === taskId) {
+      setProjectEdit(null); setProjectEditPos(null)
+    } else {
+      const r = e.currentTarget.getBoundingClientRect()
+      setProjectEditPos({ top: r.bottom + 2, left: r.left })
+      setProjectEdit(taskId)
+    }
+  }
+
+  function closeProjectEdit() { setProjectEdit(null); setProjectEditPos(null) }
+
   async function saveProject(taskId: string, projectId: string | null) {
     const proj = projects.find(p => p.id === projectId) ?? null
     mutateTasks(prev => (prev ?? []).map(t => t.id === taskId ? { ...t, project_id: projectId, project: proj ?? undefined } : t), false)
-    setProjectEdit(null)
+    closeProjectEdit()
     await supabase.from('tasks').update({ project_id: projectId }).eq('id', taskId)
     mutateTasks()
   }
@@ -178,6 +191,30 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
 
   return (
     <div className="page-enter flex flex-col h-full">
+      {/* Project edit dropdown — rendered fixed to escape kanban overflow-x-auto clipping */}
+      {projectEdit && projectEditPos && (() => {
+        const editingTask = tasks.find(t => t.id === projectEdit)
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={closeProjectEdit} />
+            <div className="fixed z-50 w-44 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
+              style={{ top: projectEditPos.top, left: projectEditPos.left }}>
+              <button onClick={() => saveProject(projectEdit, null)}
+                className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-slate-50 ${!editingTask?.project_id ? 'text-brand-600 font-semibold bg-brand-50' : 'text-slate-500'}`}>
+                No project
+              </button>
+              <div className="max-h-48 overflow-y-auto">
+                {projects.map(p => (
+                  <button key={p.id} onClick={() => saveProject(projectEdit, p.id)}
+                    className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-slate-50 ${editingTask?.project_id === p.id ? 'text-brand-600 font-semibold bg-brand-50' : 'text-slate-700'}`}>
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {/* ── Header ───────────────────────────────────────────────── */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -282,35 +319,16 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                             </p>
                           )}
 
-                          {/* Project badge — clickable */}
-                          <div className="relative inline-block mt-0.5">
-                            <button
-                              onClick={() => setProjectEdit(pe => pe === task.id ? null : task.id)}
-                              className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium transition-colors ${
-                                task.project?.name
-                                  ? 'bg-brand-50 text-brand-600 hover:bg-brand-100'
-                                  : 'text-slate-400 hover:text-brand-600 hover:bg-slate-50'
-                              }`}>
-                              {task.project?.name ?? '+ project'}
-                            </button>
-                            {projectEdit === task.id && (
-                              <>
-                                <div className="fixed inset-0 z-10" onClick={() => setProjectEdit(null)} />
-                                <div className="absolute top-full left-0 mt-0.5 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden">
-                                  <button onClick={() => saveProject(task.id, null)}
-                                    className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-slate-50 ${!task.project_id ? 'text-brand-600 font-semibold bg-brand-50' : 'text-slate-500'}`}>
-                                    No project
-                                  </button>
-                                  {projects.map(p => (
-                                    <button key={p.id} onClick={() => saveProject(task.id, p.id)}
-                                      className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-slate-50 ${task.project_id === p.id ? 'text-brand-600 font-semibold bg-brand-50' : 'text-slate-700'}`}>
-                                      {p.name}
-                                    </button>
-                                  ))}
-                                </div>
-                              </>
-                            )}
-                          </div>
+                          {/* Project badge — opens fixed dropdown (see top of return) */}
+                          <button
+                            onClick={e => openProjectEdit(e, task.id)}
+                            className={`mt-0.5 text-[10px] px-1.5 py-0.5 rounded-md font-medium transition-colors ${
+                              task.project?.name
+                                ? 'bg-brand-50 text-brand-600 hover:bg-brand-100'
+                                : 'text-slate-400 hover:text-brand-600 hover:bg-slate-50'
+                            }`}>
+                            {task.project?.name ?? '+ project'}
+                          </button>
 
                           {task.estimate_change_reason && (
                             <span className="text-[10px] text-amber-600 mt-0.5 block">✏️ {task.estimate_change_reason}</span>
