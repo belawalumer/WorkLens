@@ -88,13 +88,20 @@ CREATE POLICY "write settings" ON app_settings
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
 
 -- leave_records
-DROP POLICY IF EXISTS "read leaves"   ON leave_records;
-DROP POLICY IF EXISTS "manage leaves" ON leave_records;
+DROP POLICY IF EXISTS "read leaves"        ON leave_records;
+DROP POLICY IF EXISTS "manage leaves"      ON leave_records;
+DROP POLICY IF EXISTS "self manage leaves" ON leave_records;
 CREATE POLICY "read leaves" ON leave_records FOR SELECT USING (true);
+-- Admins can manage any leave record
 CREATE POLICY "manage leaves" ON leave_records
   FOR ALL
   USING     (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'hr_admin')))
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'hr_admin')));
+-- Developers can manage their own auto-created records (from status dropdown)
+CREATE POLICY "self manage leaves" ON leave_records
+  FOR ALL
+  USING     (developer_id = auth.uid() AND created_by = auth.uid())
+  WITH CHECK (developer_id = auth.uid() AND created_by = auth.uid());
 
 -- public_holidays
 DROP POLICY IF EXISTS "read holidays"   ON public_holidays;

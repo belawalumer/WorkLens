@@ -48,12 +48,40 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
   }
 
   async function applyStatus(s: UserStatus, f: string | null, u: string | null) {
+    // Remove auto-created leave records from today onwards when leaving "on_leave"
+    // Past days in the range are kept — they were actual leave days
+    if (status === 'on_leave' && s !== 'on_leave' && from) {
+      await supabase.from('leave_records')
+        .delete()
+        .eq('developer_id', userId)
+        .eq('created_by', userId)
+        .gte('leave_date', TODAY)
+        .lte('leave_date', until || from)
+    }
+
     setStatus(s)
     setFrom(f ?? '')
     setUntil(u ?? '')
     setPendingStatus(null)
     await supabase.from('profiles').update({ user_status: s, status_from: f, status_until: u }).eq('id', userId)
-    mutate('profiles') // push change into Dashboard + TeamManager SWR cache immediately
+
+    // Auto-create leave records for every weekday in the on_leave range
+    if (s === 'on_leave' && f) {
+      const records: { developer_id: string; leave_date: string; leave_type: string; created_by: string }[] = []
+      const cur = new Date(f + 'T12:00:00')
+      const end = new Date((u || f) + 'T12:00:00')
+      while (cur <= end) {
+        const dow = cur.getDay()
+        if (dow !== 0 && dow !== 6) {
+          records.push({ developer_id: userId, leave_date: cur.toISOString().split('T')[0], leave_type: 'full', created_by: userId })
+        }
+        cur.setDate(cur.getDate() + 1)
+      }
+      if (records.length) await supabase.from('leave_records').insert(records)
+    }
+
+    mutate('profiles')
+    mutate('leave-records')
     toast.success(`Status set to ${USER_STATUS_CONFIG[s].label}`)
   }
 

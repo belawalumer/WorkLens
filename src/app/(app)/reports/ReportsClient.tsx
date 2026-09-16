@@ -50,29 +50,52 @@ function getFixedRanges() {
   return { todayStr, weekStart: weekStart.toISOString().split('T')[0], monthStart }
 }
 
-function getMonthlyHistory(tasks: Task[], devId: string) {
+function getMonthlyHistory(tasks: Task[], devId: string, holidayDates: string[], leaveRecords: LeaveRow[]) {
   const now = new Date()
+  const todayStr = now.toISOString().split('T')[0]
   return Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    const year = d.getFullYear()
+    const month = d.getMonth()
     const start = d.toISOString().split('T')[0]
-    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-    const end = last.toISOString().split('T')[0]
+    const end = new Date(year, month + 1, 0).toISOString().split('T')[0]
+    const isFuture = start > todayStr
     const mt = tasks.filter(t => t.developer_id === devId && t.task_date >= start && t.task_date <= end)
     const hours = mt.reduce((s, t) => s + t.estimated_hours, 0)
     const done = mt.filter(t => t.completed).length
+    const devLeaves = leaveRecords.filter(l => {
+      if (l.developer_id !== devId || l.leave_date < start || l.leave_date > end) return false
+      const dow = new Date(l.leave_date + 'T12:00:00').getDay()
+      return dow !== 0 && dow !== 6 && !holidayDates.includes(l.leave_date)
+    })
+    const leaveHours = devLeaves.reduce((s, l) => s + (l.leave_type === 'full' ? 8 : 4), 0)
+    const workingDays = workingDaysInMonth(year, month, holidayDates)
+    const target = Math.max(0, workingDays * 8 - leaveHours)
     return {
       label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-      hours,
-      tasks: mt.length,
-      done,
+      hours, tasks: mt.length, done,
       pct: mt.length ? Math.round((done / mt.length) * 100) : 0,
+      target, isFuture,
     }
   })
 }
 
-interface Props { profiles: Profile[]; tasks: Task[] }
+interface LeaveRow { developer_id: string; leave_date: string; leave_type: string }
+interface Props { profiles: Profile[]; tasks: Task[]; holidayDates: string[]; leaveRecords: LeaveRow[] }
 
-export default function ReportsClient({ profiles, tasks }: Props) {
+function workingDaysInMonth(year: number, month: number, holidayDates: string[]): number {
+  const days = new Date(year, month + 1, 0).getDate()
+  let count = 0
+  for (let d = 1; d <= days; d++) {
+    const dow = new Date(year, month, d).getDay()
+    if (dow === 0 || dow === 6) continue
+    const str = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    if (!holidayDates.includes(str)) count++
+  }
+  return count
+}
+
+export default function ReportsClient({ profiles, tasks, holidayDates, leaveRecords }: Props) {
   const [period, setPeriod] = useState<Period>('week')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -152,7 +175,7 @@ export default function ReportsClient({ profiles, tasks }: Props) {
         {developers.map((dev, i) => {
           const s = stats(dev.id, start, end)
           const isExpanded = expandedId === dev.id
-          const history = isExpanded ? getMonthlyHistory(tasks, dev.id) : []
+          const history = isExpanded ? getMonthlyHistory(tasks, dev.id, holidayDates, leaveRecords) : []
           const todayS = stats(dev.id, fixed.todayStr, fixed.todayStr)
           const weekS = stats(dev.id, fixed.weekStart, fixed.todayStr)
           const monthS = stats(dev.id, fixed.monthStart, fixed.todayStr)
@@ -232,13 +255,21 @@ export default function ReportsClient({ profiles, tasks }: Props) {
                     <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-3">Monthly History</p>
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                       {history.map(m => {
-                        const maxH = Math.max(...history.map(x => x.hours), 1)
+                        const maxH = Math.max(...history.map(x => Math.max(x.hours, x.target)), 1)
+                        const met = m.hours >= m.target
+                        const neutral = m.isFuture || m.tasks === 0
+                        const barColor = neutral ? 'bg-brand-400' : met ? 'bg-green-400' : 'bg-red-400'
+                        const cardCls = neutral ? 'bg-white border-slate-200' : met ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                        const valueColor = neutral ? 'text-slate-800' : met ? 'text-green-800' : 'text-red-700'
                         return (
-                          <div key={m.label} className="bg-white border border-slate-200 rounded-xl p-3">
+                          <div key={m.label} className={`border rounded-xl p-3 ${cardCls}`}>
                             <p className="text-[10px] text-slate-600 font-semibold truncate">{m.label}</p>
-                            <p className="text-lg font-bold text-slate-800 tabular-nums mt-1">{fmt(m.hours)}<span className="text-xs text-slate-500 ml-0.5">h</span></p>
-                            <div className="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
-                              <div className="h-full bg-brand-400 rounded-full" style={{ width: `${Math.round((m.hours / maxH) * 100)}%` }} />
+                            <p className={`text-lg font-bold tabular-nums mt-1 ${valueColor}`}>
+                              {fmt(m.hours)}<span className="text-xs text-slate-500 ml-0.5">h</span>
+                            </p>
+                            <p className="text-[10px] text-slate-500 leading-none">of {fmt(m.target)}h</p>
+                            <div className="mt-1.5 h-1 rounded-full bg-slate-200 overflow-hidden">
+                              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, Math.round((m.hours / maxH) * 100))}%` }} />
                             </div>
                             <p className="text-[10px] text-slate-600 mt-1.5">{m.tasks} tasks · {m.pct}% done</p>
                           </div>

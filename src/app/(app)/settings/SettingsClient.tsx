@@ -6,17 +6,31 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from '@/lib/toast'
 
 interface Holiday { id: string; holiday_date: string; name: string }
+interface LeaveRecord { id: string; developer_id: string; leave_date: string; leave_type: string; note: string | null }
+interface Dev { id: string; full_name: string }
 
 const TODAY = new Date().toISOString().split('T')[0]
+const LEAVE_LABELS: Record<string, string> = { full: 'Full day', half_morning: 'Half (morning)', half_afternoon: 'Half (afternoon)' }
 
 const inputCls = 'px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50 transition-colors'
 
-export default function SettingsClient({ initialHolidays }: { initialHolidays: Holiday[] }) {
+export default function SettingsClient({
+  initialHolidays,
+  initialLeaves,
+  developers,
+}: {
+  initialHolidays: Holiday[]
+  initialLeaves: LeaveRecord[]
+  developers: Dev[]
+}) {
   const [newHoliday, setNewHoliday] = useState({ date: TODAY, name: '' })
-  const [adding, setAdding] = useState(false)
+  const [addingHoliday, setAddingHoliday] = useState(false)
+  const [newLeave, setNewLeave] = useState({ developer_id: developers[0]?.id ?? '', date: TODAY, type: 'full', note: '' })
+  const [addingLeave, setAddingLeave] = useState(false)
   const supabase = createClient()
 
-  const { data: holidays = initialHolidays, mutate } = useSWR<Holiday[]>(
+  // ── Holidays ──────────────────────────────────────────────────────
+  const { data: holidays = initialHolidays, mutate: mutateHolidays } = useSWR<Holiday[]>(
     'public-holidays',
     async () => {
       const { data } = await supabase.from('public_holidays').select('id, holiday_date, name').order('holiday_date', { ascending: false })
@@ -28,30 +42,64 @@ export default function SettingsClient({ initialHolidays }: { initialHolidays: H
   async function addHoliday(e: React.FormEvent) {
     e.preventDefault()
     if (!newHoliday.name.trim() || !newHoliday.date) return
-    setAdding(true)
+    setAddingHoliday(true)
     const { data, error } = await supabase
       .from('public_holidays')
       .insert({ holiday_date: newHoliday.date, name: newHoliday.name.trim() })
       .select('id, holiday_date, name')
       .single()
-    setAdding(false)
+    setAddingHoliday(false)
     if (error) { toast.error('Failed to add holiday'); return }
-    mutate(prev => [data, ...(prev ?? [])].sort((a, b) => b.holiday_date.localeCompare(a.holiday_date)), false)
+    mutateHolidays(prev => [data, ...(prev ?? [])].sort((a, b) => b.holiday_date.localeCompare(a.holiday_date)), false)
     setNewHoliday({ date: TODAY, name: '' })
     toast.success('Holiday added')
   }
 
   async function deleteHoliday(id: string) {
-    mutate(prev => (prev ?? []).filter(h => h.id !== id), false)
+    mutateHolidays(prev => (prev ?? []).filter(h => h.id !== id), false)
     await supabase.from('public_holidays').delete().eq('id', id)
-    mutate()
+    mutateHolidays()
     toast.success('Holiday removed')
   }
 
+  // ── Leave records ─────────────────────────────────────────────────
+  const { data: leaves = initialLeaves, mutate: mutateLeaves } = useSWR<LeaveRecord[]>(
+    'leave-records',
+    async () => {
+      const { data } = await supabase.from('leave_records').select('id, developer_id, leave_date, leave_type, note').order('leave_date', { ascending: false })
+      return data ?? []
+    },
+    { fallbackData: initialLeaves },
+  )
+
+  async function addLeave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newLeave.developer_id || !newLeave.date) return
+    setAddingLeave(true)
+    const { data, error } = await supabase
+      .from('leave_records')
+      .insert({ developer_id: newLeave.developer_id, leave_date: newLeave.date, leave_type: newLeave.type, note: newLeave.note.trim() || null })
+      .select('id, developer_id, leave_date, leave_type, note')
+      .single()
+    setAddingLeave(false)
+    if (error) { toast.error('Failed to add leave'); return }
+    mutateLeaves(prev => [data, ...(prev ?? [])].sort((a, b) => b.leave_date.localeCompare(a.leave_date)), false)
+    setNewLeave(p => ({ ...p, date: TODAY, note: '' }))
+    toast.success('Leave recorded')
+  }
+
+  async function deleteLeave(id: string) {
+    mutateLeaves(prev => (prev ?? []).filter(l => l.id !== id), false)
+    await supabase.from('leave_records').delete().eq('id', id)
+    mutateLeaves()
+    toast.success('Leave removed')
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────
   function fmtDate(d: string) {
     return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
   }
-
+  const devName = (id: string) => developers.find(d => d.id === id)?.full_name ?? 'Unknown'
   const isPast = (d: string) => d < TODAY
   const isToday = (d: string) => d === TODAY
 
@@ -74,20 +122,18 @@ export default function SettingsClient({ initialHolidays }: { initialHolidays: H
           </span>
         </div>
 
-        {/* Add form */}
         <form onSubmit={addHoliday} className="flex flex-col sm:flex-row gap-2">
           <input type="date" value={newHoliday.date} onChange={e => setNewHoliday(p => ({ ...p, date: e.target.value }))}
             className={`${inputCls} w-full sm:w-44`} />
           <input type="text" placeholder="Holiday name (e.g. Eid ul-Fitr)" value={newHoliday.name}
             onChange={e => setNewHoliday(p => ({ ...p, name: e.target.value }))}
             className={`${inputCls} flex-1`} />
-          <button type="submit" disabled={adding || !newHoliday.name.trim()}
+          <button type="submit" disabled={addingHoliday || !newHoliday.name.trim()}
             className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-50 transition-colors shrink-0">
-            {adding ? 'Adding…' : '+ Add'}
+            {addingHoliday ? 'Adding…' : '+ Add'}
           </button>
         </form>
 
-        {/* Holiday list */}
         {holidays.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
             No holidays added yet
@@ -98,9 +144,7 @@ export default function SettingsClient({ initialHolidays }: { initialHolidays: H
               <div key={h.id} className={`flex items-center gap-3 px-4 py-3 ${isPast(h.holiday_date) ? 'bg-slate-50' : 'bg-white'}`}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className={`text-sm font-semibold ${isPast(h.holiday_date) ? 'text-slate-400' : 'text-slate-800'}`}>
-                      {h.name}
-                    </p>
+                    <p className={`text-sm font-semibold ${isPast(h.holiday_date) ? 'text-slate-400' : 'text-slate-800'}`}>{h.name}</p>
                     {isToday(h.holiday_date) && (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 uppercase tracking-wide">Today</span>
                     )}
@@ -108,11 +152,75 @@ export default function SettingsClient({ initialHolidays }: { initialHolidays: H
                       <span className="text-[10px] text-slate-400 font-medium">Past</span>
                     )}
                   </div>
-                  <p className={`text-xs mt-0.5 ${isPast(h.holiday_date) ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {fmtDate(h.holiday_date)}
-                  </p>
+                  <p className={`text-xs mt-0.5 ${isPast(h.holiday_date) ? 'text-slate-400' : 'text-slate-500'}`}>{fmtDate(h.holiday_date)}</p>
                 </div>
                 <button onClick={() => deleteHoliday(h.id)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/>
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Leave records ────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-700">Developer Leaves</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Leave days are deducted from each developer's monthly expected hours in Reports.</p>
+        </div>
+
+        <form onSubmit={addLeave} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+          <select value={newLeave.developer_id} onChange={e => setNewLeave(p => ({ ...p, developer_id: e.target.value }))}
+            className={inputCls}>
+            {developers.map(d => <option key={d.id} value={d.id}>{d.full_name}</option>)}
+          </select>
+          <div className="flex gap-2">
+            <input type="date" value={newLeave.date} onChange={e => setNewLeave(p => ({ ...p, date: e.target.value }))}
+              className={`${inputCls} flex-1`} />
+            <select value={newLeave.type} onChange={e => setNewLeave(p => ({ ...p, type: e.target.value }))}
+              className={inputCls}>
+              <option value="full">Full day</option>
+              <option value="half_morning">Half (AM)</option>
+              <option value="half_afternoon">Half (PM)</option>
+            </select>
+          </div>
+          <button type="submit" disabled={addingLeave || !newLeave.developer_id}
+            className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-50 transition-colors shrink-0">
+            {addingLeave ? 'Adding…' : '+ Add'}
+          </button>
+        </form>
+
+        {leaves.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            No leave records yet
+          </p>
+        ) : (
+          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 overflow-hidden">
+            {leaves.map(l => (
+              <div key={l.id} className={`flex items-center gap-3 px-4 py-3 ${isPast(l.leave_date) ? 'bg-slate-50' : 'bg-white'}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className={`text-sm font-semibold ${isPast(l.leave_date) ? 'text-slate-400' : 'text-slate-800'}`}>
+                      {devName(l.developer_id)}
+                    </p>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                      l.leave_type === 'full'
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {LEAVE_LABELS[l.leave_type] ?? l.leave_type}
+                    </span>
+                    {isToday(l.leave_date) && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 uppercase tracking-wide">Today</span>
+                    )}
+                  </div>
+                  <p className={`text-xs mt-0.5 ${isPast(l.leave_date) ? 'text-slate-400' : 'text-slate-500'}`}>{fmtDate(l.leave_date)}</p>
+                </div>
+                <button onClick={() => deleteLeave(l.id)}
                   className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/>
