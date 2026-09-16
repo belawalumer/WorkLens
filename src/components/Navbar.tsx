@@ -110,6 +110,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
             {navLink('/', 'Dashboard')}
             {navLink('/my-tasks', 'My Tasks')}
             {navLink('/team', 'Team')}
+            {userRole === 'super_admin' && navLink('/reports', 'Reports')}
           </nav>
         </div>
 
@@ -247,8 +248,12 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
       {/* Mobile nav drawer */}
       {mobileMenuOpen && (
         <div className="sm:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-1">
-          {(['/', '/my-tasks', '/team'] as const).map((href, i) => {
-            const label = ['Dashboard', 'My Tasks', 'Team'][i]
+          {([
+            ['/', 'Dashboard'],
+            ['/my-tasks', 'My Tasks'],
+            ['/team', 'Team'],
+            ...(userRole === 'super_admin' ? [['/reports', 'Reports']] : []),
+          ] as [string, string][]).map(([href, label]) => {
             const active = pathname === href
             return (
               <Link key={href} href={href} prefetch onClick={() => setMobileMenuOpen(false)}
