@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Navbar from '@/components/Navbar'
+import RealtimeProvider from '@/components/RealtimeProvider'
 import { Role, UserStatus } from '@/types'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +25,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         statusFrom={profile?.status_from ?? null}
         statusUntil={profile?.status_until ?? null}
       />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <RealtimeProvider>{children}</RealtimeProvider>
+      </main>
     </div>
   )
 }

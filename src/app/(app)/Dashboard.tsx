@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus } from '@/types'
 import DeveloperCard from '@/components/DeveloperCard'
-import { toast } from '@/lib/toast'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
 const initials = (name: string) => { const p = name.trim().split(/\s+/); return (p.length === 1 ? p[0][0] : p[0][0] + p[p.length - 1][0]).toUpperCase() }
@@ -109,43 +108,21 @@ export default function Dashboard({
   const [filter, setFilter] = useState<FilterStatus>('all')
   const supabase = createClient()
 
-  const { data: tasks = initTasks, mutate: mutateTasks } = useSWR(
+  const { data: tasks = initTasks } = useSWR(
     'dashboard-tasks',
     async () => (await supabase.from('tasks').select('*, project:projects(id, name)').eq('task_date', TODAY)).data ?? [],
     { fallbackData: initTasks, revalidateOnFocus: true },
   )
-  const { data: profiles = initProfiles, mutate: mutateProfiles } = useSWR(
+  const { data: profiles = initProfiles } = useSWR(
     'profiles',
     async () => (await supabase.from('profiles').select('*').order('full_name')).data ?? [],
     { fallbackData: initProfiles, revalidateOnFocus: true },
   )
-  const { data: roles = initRoles, mutate: mutateRoles } = useSWR(
+  const { data: roles = initRoles } = useSWR(
     'developer-roles',
     async () => (await supabase.from('developer_roles').select('*, project:projects(id, name)')).data ?? [],
-    { fallbackData: initRoles },
+    { fallbackData: initRoles, revalidateOnFocus: true },
   )
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('workload-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
-        if (payload.eventType === 'INSERT') { toast('📋 New task added'); mutateTasks(prev => [...(prev ?? []), payload.new as Task], false) }
-        else if (payload.eventType === 'UPDATE') mutateTasks(prev => (prev ?? []).map(t => t.id === (payload.new as Task).id ? payload.new as Task : t), false)
-        else if (payload.eventType === 'DELETE') mutateTasks(prev => (prev ?? []).filter(t => t.id !== (payload.old as Task).id), false)
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, payload => {
-        mutateProfiles(prev => [...(prev ?? []), payload.new as Profile].sort((a, b) => a.full_name.localeCompare(b.full_name)), false)
-        toast('👋 New team member joined')
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, payload => {
-        mutateProfiles(prev => (prev ?? []).map(p => p.id === (payload.new as Profile).id ? { ...p, ...payload.new as Profile } : p), false)
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'developer_roles' }, () => {
-        mutateRoles()
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const developers = buildDeveloperData(profiles, roles, tasks)
 
