@@ -24,14 +24,14 @@ const ROLE_BADGE: Record<Role, string> = {
 
 const TOP_BORDER: Record<string, string> = {
   overloaded:  'border-t-red-500',
-  full:        'border-t-green-500',
+  full:        'border-t-brand-500',
   underloaded: 'border-t-amber-400',
   available:   'border-t-emerald-400',
 }
 
 const BAR_BG: Record<string, string> = {
   overloaded:  'bg-red-500',
-  full:        'bg-green-500',
+  full:        'bg-brand-500',
   underloaded: 'bg-amber-400',
   available:   'bg-emerald-400',
 }

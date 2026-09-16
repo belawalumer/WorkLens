@@ -246,7 +246,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                   </div>
                 ) : (
                   dayTasks.map(task => (
-                    <div key={task.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow transition-shadow">
+                    <div key={task.id} className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow transition-shadow">
                       <div className="flex items-start gap-2.5 px-3 py-2.5">
 
                         {/* Checkbox */}
@@ -332,7 +332,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
 
                       {/* Estimate edit panel */}
                       {estimateEdit?.taskId === task.id && (
-                        <form onSubmit={saveEstimate} className="border-t border-slate-100 bg-slate-50 px-3 py-2.5 space-y-2">
+                        <form onSubmit={saveEstimate} className="border-t border-slate-100 bg-slate-50 px-3 py-2.5 space-y-2 rounded-b-xl overflow-hidden">
                           <div className="flex items-center gap-2">
                             <label className="text-[11px] font-semibold text-slate-600 shrink-0">Hours</label>
                             <input autoFocus type="number" min="0.05" max="24" step="0.05"
@@ -372,7 +372,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
           <form
             onSubmit={addTask}
             onClick={e => e.stopPropagation()}
-            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md"
           >
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
@@ -490,7 +490,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
             </div>
 
             {/* Modal footer */}
-            <div className="flex gap-2 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+            <div className="flex gap-2 px-6 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl overflow-hidden">
               <button
                 type="submit"
                 disabled={saving || !form.title.trim()}

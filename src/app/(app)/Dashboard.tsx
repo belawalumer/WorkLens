@@ -96,7 +96,7 @@ function StatCard({
 
 const STATUS_DISTRIBUTION: Record<WorkloadStatus, { label: string; color: string }> = {
   overloaded:  { label: 'Overloaded',  color: '#dc2626' },
-  full:        { label: 'Occupied',   color: '#16a34a' },
+  full:        { label: 'Occupied',   color: '#0078b7' },
   underloaded: { label: 'Underloaded', color: '#ca8a04' },
   available:   { label: 'Available',   color: '#0078b7' },
 }
