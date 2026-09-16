@@ -21,11 +21,14 @@ interface Props { initialTasks: Task[]; userId: string }
 interface EstimateEdit { taskId: string; originalHours: number; hours: string; reason: string; reasonError: boolean }
 
 export default function MyTasks({ initialTasks, userId }: Props) {
-  const [adding, setAdding] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ title: '', estimated_hours: '1', task_date: TODAY, project_id: '' })
   const [saving, setSaving] = useState(false)
+  const [projOpen, setProjOpen] = useState(false)
+  const [projSearch, setProjSearch] = useState('')
   const [estimateEdit, setEstimateEdit] = useState<EstimateEdit | null>(null)
   const [editingTitle, setEditingTitle] = useState<{ taskId: string; title: string } | null>(null)
+  const [projectEdit, setProjectEdit] = useState<string | null>(null)
   const supabase = createClient()
 
   const { data: projects = [] } = useSWR<{ id: string; name: string }[]>(
@@ -55,15 +58,30 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     return () => { supabase.removeChannel(channel) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  function openModal(date?: string) {
+    setForm(f => ({ ...f, task_date: date ?? TODAY, title: '', project_id: '' }))
+    setProjOpen(false)
+    setProjSearch('')
+    setShowModal(true)
+  }
+
+  function closeModal() {
+    setShowModal(false)
+    setProjOpen(false)
+    setProjSearch('')
+  }
+
   async function addTask(e: React.FormEvent) {
     e.preventDefault()
     if (!form.title.trim()) return
     setSaving(true)
     const projectId = form.project_id || null
+    const proj = projects.find(p => p.id === projectId) ?? null
     const tempTask: Task = {
       id: crypto.randomUUID(),
       developer_id: userId,
       project_id: projectId,
+      project: proj ?? undefined,
       title: form.title.trim(),
       estimated_hours: parseFloat(form.estimated_hours) || 1,
       completed: false,
@@ -71,8 +89,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
       estimate_change_reason: null,
     }
     mutateTasks(prev => [tempTask, ...(prev ?? [])], false)
-    setForm({ title: '', estimated_hours: '1', task_date: TODAY, project_id: '' })
-    setAdding(false)
+    closeModal()
     setSaving(false)
     await supabase.from('tasks').insert({
       developer_id: userId,
@@ -106,6 +123,14 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     await supabase.from('tasks').update({ title: trimmed }).eq('id', taskId)
     mutateTasks()
     toast.success('Task updated')
+  }
+
+  async function saveProject(taskId: string, projectId: string | null) {
+    const proj = projects.find(p => p.id === projectId) ?? null
+    mutateTasks(prev => (prev ?? []).map(t => t.id === taskId ? { ...t, project_id: projectId, project: proj ?? undefined } : t), false)
+    setProjectEdit(null)
+    await supabase.from('tasks').update({ project_id: projectId }).eq('id', taskId)
+    mutateTasks()
   }
 
   function openEstimateEdit(task: Task) {
@@ -143,7 +168,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
     return Array.from(dateSet).sort((a, b) => b.localeCompare(a))
   }, [tasks])
 
-  const inputCls = 'w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-colors bg-slate-50'
+  const selectedProjName = projects.find(p => p.id === form.project_id)?.name
 
   return (
     <div className="page-enter flex flex-col h-full">
@@ -164,52 +189,11 @@ export default function MyTasks({ initialTasks, userId }: Props) {
             </span>
           </div>
         </div>
-        <button onClick={() => setAdding(a => !a)}
+        <button onClick={() => openModal()}
           className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm shadow-brand-200">
           + Add task
         </button>
       </div>
-
-      {/* ── Add task form ─────────────────────────────────────────── */}
-      {adding && (
-        <form onSubmit={addTask} className="bg-white border border-brand-200 rounded-2xl p-4 mb-5 space-y-3 shadow-sm">
-          <input autoFocus type="text" placeholder="What needs to be done?"
-            value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-            className={inputCls} />
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-              <span className="text-xs text-slate-500 shrink-0">⏱</span>
-              <input type="number" min="0.05" max="24" step="0.05" value={form.estimated_hours}
-                onChange={e => setForm(f => ({ ...f, estimated_hours: e.target.value }))}
-                className="w-14 text-sm focus:outline-none bg-transparent" />
-              <span className="text-xs text-slate-500">h</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-              <span className="text-xs text-slate-500 shrink-0">📅</span>
-              <input type="date" value={form.task_date}
-                onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
-                className="text-sm focus:outline-none bg-transparent" />
-            </div>
-            {projects.length > 0 && (
-              <select value={form.project_id} onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 text-slate-600">
-                <option value="">No project</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button type="submit" disabled={saving}
-              className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-50 transition-colors">
-              {saving ? 'Saving…' : 'Add task'}
-            </button>
-            <button type="button" onClick={() => setAdding(false)}
-              className="px-4 py-2 border border-slate-200 text-sm rounded-xl hover:bg-slate-50 text-slate-600 transition-colors">
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
 
       {/* ── Board ─────────────────────────────────────────────────── */}
       <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 flex-1 items-start">
@@ -254,7 +238,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                 {dayTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <p className="text-slate-400 text-xs">No tasks yet</p>
-                    <button onClick={() => { setForm(f => ({ ...f, task_date: date })); setAdding(true) }}
+                    <button onClick={() => openModal(date)}
                       className="mt-1.5 text-brand-600 text-xs font-semibold hover:text-brand-800">
                       + Add one
                     </button>
@@ -272,7 +256,7 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                           {task.completed && <span className="text-[9px] font-bold">✓</span>}
                         </button>
 
-                        {/* Title */}
+                        {/* Title + project */}
                         <div className="flex-1 min-w-0">
                           {editingTitle?.taskId === task.id ? (
                             <input autoFocus type="text"
@@ -291,11 +275,37 @@ export default function MyTasks({ initialTasks, userId }: Props) {
                               {task.title}
                             </p>
                           )}
-                          {task.project?.name && (
-                            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-md bg-brand-50 text-brand-600 font-medium mt-0.5">
-                              {task.project.name}
-                            </span>
-                          )}
+
+                          {/* Project badge — clickable */}
+                          <div className="relative inline-block mt-0.5">
+                            <button
+                              onClick={() => setProjectEdit(pe => pe === task.id ? null : task.id)}
+                              className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium transition-colors ${
+                                task.project?.name
+                                  ? 'bg-brand-50 text-brand-600 hover:bg-brand-100'
+                                  : 'text-slate-400 hover:text-brand-600 hover:bg-slate-50'
+                              }`}>
+                              {task.project?.name ?? '+ project'}
+                            </button>
+                            {projectEdit === task.id && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => setProjectEdit(null)} />
+                                <div className="absolute top-full left-0 mt-0.5 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                                  <button onClick={() => saveProject(task.id, null)}
+                                    className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-slate-50 ${!task.project_id ? 'text-brand-600 font-semibold bg-brand-50' : 'text-slate-500'}`}>
+                                    No project
+                                  </button>
+                                  {projects.map(p => (
+                                    <button key={p.id} onClick={() => saveProject(task.id, p.id)}
+                                      className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-slate-50 ${task.project_id === p.id ? 'text-brand-600 font-semibold bg-brand-50' : 'text-slate-700'}`}>
+                                      {p.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
+
                           {task.estimate_change_reason && (
                             <span className="text-[10px] text-amber-600 mt-0.5 block">✏️ {task.estimate_change_reason}</span>
                           )}
@@ -353,6 +363,147 @@ export default function MyTasks({ initialTasks, userId }: Props) {
           )
         })}
       </div>
+
+      {/* ── Add Task Modal ────────────────────────────────────────── */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4" onClick={closeModal}>
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <form
+            onSubmit={addTask}
+            onClick={e => e.stopPropagation()}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h2 className="text-base font-bold text-slate-900">Add Task</h2>
+              <button type="button" onClick={closeModal}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div className="px-6 py-5 space-y-4">
+              {/* Title */}
+              <div>
+                <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Task</label>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="What needs to be done?"
+                  value={form.title}
+                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50 transition-colors"
+                />
+              </div>
+
+              {/* Hours + Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Hours</label>
+                  <div className="flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus-within:ring-2 focus-within:ring-brand-400 transition-colors">
+                    <input
+                      type="number" min="0.05" max="24" step="0.05"
+                      value={form.estimated_hours}
+                      onChange={e => setForm(f => ({ ...f, estimated_hours: e.target.value }))}
+                      className="w-full text-sm focus:outline-none bg-transparent"
+                    />
+                    <span className="text-xs text-slate-400 shrink-0">h</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Date</label>
+                  <input
+                    type="date"
+                    value={form.task_date}
+                    onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Project — custom dropdown */}
+              {projects.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Project</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => { setProjOpen(o => !o); setProjSearch('') }}
+                      className="w-full flex items-center justify-between px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm hover:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition-colors"
+                    >
+                      <span className={selectedProjName ? 'text-slate-800 font-medium' : 'text-slate-400'}>
+                        {selectedProjName ?? 'No project'}
+                      </span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                        className={`text-slate-400 transition-transform ${projOpen ? 'rotate-180' : ''}`}>
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    </button>
+
+                    {projOpen && (
+                      <>
+                        <div className="fixed inset-0 z-0" onClick={() => setProjOpen(false)} />
+                        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-10 overflow-hidden">
+                          <div className="p-2 border-b border-slate-100">
+                            <input
+                              type="text"
+                              placeholder="Search projects…"
+                              value={projSearch}
+                              onChange={e => setProjSearch(e.target.value)}
+                              autoFocus
+                              className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50"
+                            />
+                          </div>
+                          <div className="max-h-44 overflow-y-auto">
+                            <button type="button"
+                              onClick={() => { setForm(f => ({ ...f, project_id: '' })); setProjOpen(false) }}
+                              className={`w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-slate-50 flex items-center gap-2 ${!form.project_id ? 'text-brand-600 font-semibold bg-brand-50/50' : 'text-slate-500'}`}>
+                              <span className="w-4 h-4 rounded-full border-2 border-slate-200 shrink-0 flex items-center justify-center">
+                                {!form.project_id && <span className="w-2 h-2 rounded-full bg-brand-500 block" />}
+                              </span>
+                              No project
+                            </button>
+                            {projects
+                              .filter(p => !projSearch || p.name.toLowerCase().includes(projSearch.toLowerCase()))
+                              .map(p => (
+                                <button type="button" key={p.id}
+                                  onClick={() => { setForm(f => ({ ...f, project_id: p.id })); setProjOpen(false) }}
+                                  className={`w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-slate-50 flex items-center gap-2 ${form.project_id === p.id ? 'text-brand-600 font-semibold bg-brand-50/50' : 'text-slate-700'}`}>
+                                  <span className="w-4 h-4 rounded-full border-2 border-slate-200 shrink-0 flex items-center justify-center">
+                                    {form.project_id === p.id && <span className="w-2 h-2 rounded-full bg-brand-500 block" />}
+                                  </span>
+                                  {p.name}
+                                </button>
+                              ))
+                            }
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal footer */}
+            <div className="flex gap-2 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+              <button
+                type="submit"
+                disabled={saving || !form.title.trim()}
+                className="flex-1 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-50 transition-colors">
+                {saving ? 'Saving…' : 'Add task'}
+              </button>
+              <button type="button" onClick={closeModal}
+                className="px-5 py-2.5 border border-slate-200 text-sm rounded-xl hover:bg-white text-slate-600 transition-colors font-medium">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

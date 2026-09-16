@@ -6,14 +6,6 @@ import { Profile, Task, ROLE_LABELS, Role } from '@/types'
 type Period = 'today' | 'week' | 'month' | '3months' | '6months'
 type TaskFilter = 'all' | 'done' | 'pending'
 
-const PERIODS: { key: Period; label: string }[] = [
-  { key: 'today',    label: 'Today' },
-  { key: 'week',     label: 'This Week' },
-  { key: 'month',    label: 'This Month' },
-  { key: '3months',  label: '3 Months' },
-  { key: '6months',  label: '6 Months' },
-]
-
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
 
 const initials = (name: string) => {
@@ -96,7 +88,7 @@ function workingDaysInMonth(year: number, month: number, holidayDates: string[])
 }
 
 export default function ReportsClient({ profiles, tasks, holidayDates, leaveRecords }: Props) {
-  const [period, setPeriod] = useState<Period>('week')
+  const period: Period = 'month'
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all')
@@ -144,16 +136,6 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
           <input type="text" placeholder="Search developer…" value={search} onChange={e => setSearch(e.target.value)}
             className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 w-52 transition-colors" />
         </div>
-      </div>
-
-      {/* Period selector */}
-      <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden text-sm shadow-sm mb-5 w-fit">
-        {PERIODS.map(p => (
-          <button key={p.key} onClick={() => setPeriod(p.key)}
-            className={`px-3 py-1.5 font-medium transition-colors whitespace-nowrap ${period === p.key ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}>
-            {p.label}
-          </button>
-        ))}
       </div>
 
       {/* Table */}
@@ -282,7 +264,7 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                        Tasks — {PERIODS.find(p => p.key === period)?.label}
+                        Tasks — This Month
                       </p>
                       <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden text-xs shadow-sm">
                         {(['all', 'done', 'pending'] as TaskFilter[]).map(f => (
