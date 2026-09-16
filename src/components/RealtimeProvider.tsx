@@ -15,16 +15,13 @@ export default function RealtimeProvider({ children }: { children: React.ReactNo
     const channel = supabase
       .channel('app-global')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
-        if (payload.eventType === 'INSERT') {
-          // Refetch to include project join
-          mutate('dashboard-tasks')
-        } else if (payload.eventType === 'UPDATE') {
-          const t = payload.new as Task
-          mutate('dashboard-tasks', (prev: Task[] = []) =>
-            prev.map(p => p.id === t.id ? { ...p, ...t } : p), false)
-        } else if (payload.eventType === 'DELETE') {
+        if (payload.eventType === 'DELETE') {
+          // Optimistic delete — no joins needed
           const t = payload.old as Task
           mutate('dashboard-tasks', (prev: Task[] = []) => prev.filter(p => p.id !== t.id), false)
+        } else {
+          // INSERT/UPDATE: refetch to include project join (raw payloads have no joins)
+          mutate('dashboard-tasks')
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, payload => {
