@@ -172,8 +172,8 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
 
   const inputCls = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 bg-slate-50 transition-colors'
   const gridCls = currentUserRole === 'developer'
-    ? 'grid-cols-[1fr_auto] sm:grid-cols-[1fr_140px]'
-    : 'grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_140px_160px]'
+    ? 'sm:grid-cols-[1fr_140px]'
+    : 'sm:grid-cols-[1fr_140px_160px]'
 
   // Summary cards based on role visibility
   const summaryCards = (
@@ -302,11 +302,11 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
 
       {/* ── Members table ───────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className={`grid ${gridCls} gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200`}>
+        <div className={`hidden sm:grid ${gridCls} gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200`}>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Member</span>
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide text-right sm:text-left">Role</span>
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Role</span>
           {currentUserRole !== 'developer' && (
-            <span className="hidden sm:block text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Actions</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Actions</span>
           )}
         </div>
 
@@ -323,9 +323,9 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
 
           return (
             <div key={member.id} className={i < filtered.length - 1 ? 'border-b border-slate-100' : ''}>
-              <div className={`grid ${gridCls} gap-4 items-center px-5 py-4 ${isSelf ? 'bg-brand-50/30' : 'hover:bg-slate-50'} transition-colors`}>
+              <div className={`sm:grid ${gridCls} gap-x-4 items-center px-5 py-4 ${isSelf ? 'bg-brand-50/30' : 'hover:bg-slate-50'} transition-colors`}>
                 {/* Avatar + name */}
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-start gap-3 min-w-0">
                   <div className="relative shrink-0 group/status">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${AVATAR_BG[member.role]}`}>
                       {initials(member.full_name)}
@@ -341,10 +341,13 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
                       })()}
                     </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{member.full_name}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-sm font-semibold text-slate-800">{member.full_name}</p>
                       {isSelf && <span className="text-[11px] text-brand-500 font-medium shrink-0">(you)</span>}
+                    </div>
+                    <p className="text-xs text-slate-500 break-all">{member.email}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                       {member.whatsapp && (
                         <a
                           href={`https://wa.me/${member.whatsapp.replace(/\D/g, '')}`}
@@ -356,13 +359,16 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
                           WhatsApp
                         </a>
                       )}
+                      {/* Role badge — mobile only; desktop uses the grid column */}
+                      <span className={`sm:hidden inline-flex text-xs px-2.5 py-1 rounded-full font-semibold border ${ROLE_COLORS[member.role]}`}>
+                        {ROLE_LABELS[member.role]}
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-500 truncate">{member.email}</p>
                   </div>
                 </div>
 
-                {/* Role */}
-                <div>
+                {/* Role — desktop only; mobile shows it in the badges row */}
+                <div className="hidden sm:block">
                   {isEditingRole ? (
                     <div className="flex items-center gap-1">
                       <select value={pendingRole} onChange={e => setPendingRole(e.target.value as Role)}
