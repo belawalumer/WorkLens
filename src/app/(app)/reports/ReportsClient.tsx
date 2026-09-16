@@ -234,19 +234,20 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
                     ))}
                   </div>
 
-                  {/* Monthly history */}
+                  {/* Monthly history — only months with logged tasks */}
+                  {history.some(m => m.tasks > 0) && (
                   <div>
                     <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-3">Monthly History</p>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {history.map(m => {
-                        const maxH = Math.max(...history.map(x => Math.max(x.hours, x.target)), 1)
+                    <div className="flex flex-wrap gap-2">
+                      {history.filter(m => m.tasks > 0).map(m => {
+                        const maxH = Math.max(...history.filter(x => x.tasks > 0).map(x => Math.max(x.hours, x.target)), 1)
                         const met = m.hours >= m.target
                         const neutral = m.isFuture || m.tasks === 0
                         const barColor = neutral ? 'bg-brand-400' : met ? 'bg-green-400' : 'bg-red-400'
                         const cardCls = neutral ? 'bg-white border-slate-200' : met ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                         const valueColor = neutral ? 'text-slate-800' : met ? 'text-green-800' : 'text-red-700'
                         return (
-                          <div key={m.label} className={`border rounded-xl p-3 ${cardCls}`}>
+                          <div key={m.label} className={`border rounded-xl p-3 w-28 shrink-0 ${cardCls}`}>
                             <p className="text-[10px] text-slate-600 font-semibold truncate">{m.label}</p>
                             <p className={`text-lg font-bold tabular-nums mt-1 ${valueColor}`}>
                               {fmt(m.hours)}<span className="text-xs text-slate-500 ml-0.5">h</span>
@@ -261,6 +262,7 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
                       })}
                     </div>
                   </div>
+                  )}
 
                   {/* Task list */}
                   <div>
