@@ -98,7 +98,7 @@ const STATUS_DISTRIBUTION: Record<WorkloadStatus, { label: string; color: string
   overloaded:  { label: 'Overloaded',  color: '#dc2626' },
   full:        { label: 'Occupied',   color: '#0078b7' },
   underloaded: { label: 'Underloaded', color: '#ca8a04' },
-  available:   { label: 'Available',   color: '#0078b7' },
+  available:   { label: 'Available',   color: '#059669' },
 }
 
 // ─── Main component ────────────────────────────────────────────────────────────
@@ -172,9 +172,8 @@ export default function Dashboard({
   )
 
   function buildWhatsAppUrl(dev: DeveloperWithData) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const msg = encodeURIComponent(
-      `Hi ${dev.full_name.split(' ')[0]}! 👋 Hope you're having a great day. Just a quick reminder to log your tasks for today on WorkLens: ${origin}/my-tasks — Your updates help the whole team stay in sync. Thanks! 😊`
+      `Hi ${dev.full_name.split(' ')[0]}! Hope you're having a great day. Just a quick reminder to log your tasks for today on WorkLens: https://work-lens-kappa.vercel.app/my-tasks - Your updates help the whole team stay in sync. Thanks!`
     )
     const phone = ((dev as Profile & { whatsapp?: string | null }).whatsapp ?? '').replace(/\D/g, '')
     return `https://wa.me/${phone}?text=${msg}`
@@ -248,7 +247,7 @@ export default function Dashboard({
 
       {/* ── Status summary strip ────────────────────────────────────────── */}
       {developers.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Status Distribution</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {(Object.entries(STATUS_DISTRIBUTION) as [WorkloadStatus, { label: string; color: string }][]).map(([key, s]) => {

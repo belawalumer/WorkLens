@@ -57,9 +57,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
           }`}>
             {initials(dev.full_name)}
           </div>
-          <span className="absolute -bottom-1 -right-1 flex items-center justify-center w-4 h-4 bg-white rounded-full text-[9px] leading-none shadow-sm ring-1 ring-slate-100">
-            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].emoji}
-          </span>
+          <span className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full ring-2 ring-white shadow-sm ${USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].dotBg}`} />
           <div className="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/status:opacity-100 transition-opacity z-20">
             {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
             {(() => {

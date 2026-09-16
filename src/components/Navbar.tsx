@@ -158,9 +158,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
                 <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center">
                   <span className="text-brand-700 text-xs font-bold">{initials(userName)}</span>
                 </div>
-                <span className="absolute -bottom-1 -right-1 flex items-center justify-center w-4 h-4 bg-white rounded-full text-[9px] leading-none shadow-sm ring-1 ring-slate-100" title={USER_STATUS_CONFIG[status].label}>
-                  {USER_STATUS_CONFIG[status].emoji}
-                </span>
+                <span className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full ring-2 ring-white shadow-sm ${USER_STATUS_CONFIG[status].dotBg}`} title={USER_STATUS_CONFIG[status].label} />
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-slate-800 leading-none">{userName}</p>
