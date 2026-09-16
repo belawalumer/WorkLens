@@ -29,10 +29,6 @@ const TYPE_ICON: Record<Notif['type'], string> = {
 function isToday(d: Date) {
   const t = new Date(); return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate()
 }
-function isYesterday(d: Date) {
-  const y = new Date(); y.setDate(y.getDate() - 1)
-  return d.getFullYear() === y.getFullYear() && d.getMonth() === y.getMonth() && d.getDate() === y.getDate()
-}
 
 function timeAgo(d: Date) {
   const s = Math.floor((Date.now() - d.getTime()) / 1000)
@@ -145,12 +141,7 @@ export default function NotificationBell({ userRole, userId }: { userRole: Role;
     if (unread > 0) markAllRead()
   }
 
-  // Group notifications for the panel (show today + yesterday only, max 8)
-  const todayNotifs = notifs.filter(n => isToday(n.at)).slice(0, 5)
-  const yesterdayNotifs = notifs.filter(n => isYesterday(n.at)).slice(0, 3)
-  const panelNotifs: { label: string; items: Notif[] }[] = []
-  if (todayNotifs.length) panelNotifs.push({ label: 'Today', items: todayNotifs })
-  if (yesterdayNotifs.length) panelNotifs.push({ label: 'Yesterday', items: yesterdayNotifs })
+  const todayNotifs = notifs.filter(n => isToday(n.at))
 
   return (
     <>
@@ -198,27 +189,22 @@ export default function NotificationBell({ userRole, userId }: { userRole: Role;
             </div>
 
             <div className="max-h-80 overflow-y-auto">
-              {panelNotifs.length === 0 ? (
+              {todayNotifs.length === 0 ? (
                 <div className="px-4 py-8 text-center">
-                  <p className="text-slate-600 text-sm font-medium">No notifications yet</p>
+                  <p className="text-slate-600 text-sm font-medium">No notifications today</p>
                   <p className="text-slate-400 text-xs mt-1">Updates will appear here in real time</p>
                 </div>
               ) : (
-                panelNotifs.map(group => (
-                  <div key={group.label}>
-                    <p className="px-4 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{group.label}</p>
-                    {group.items.map(n => (
-                      <div key={n.id} className={`flex items-start gap-3 px-4 py-3 transition-colors ${n.read ? 'bg-white' : 'bg-brand-50/50'}`}>
-                        <span className="text-base mt-0.5 shrink-0">{TYPE_ICON[n.type]}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs leading-relaxed ${n.read ? 'text-slate-600' : 'text-slate-800 font-semibold'}`}>
-                            {n.message}
-                          </p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">{timeAgo(n.at)}</p>
-                        </div>
-                        {!n.read && <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0 mt-1.5" />}
-                      </div>
-                    ))}
+                todayNotifs.map(n => (
+                  <div key={n.id} className={`flex items-start gap-3 px-4 py-3 transition-colors ${n.read ? 'bg-white' : 'bg-brand-50/50'}`}>
+                    <span className="text-base mt-0.5 shrink-0">{TYPE_ICON[n.type]}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs leading-relaxed ${n.read ? 'text-slate-600' : 'text-slate-800 font-semibold'}`}>
+                        {n.message}
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">{timeAgo(n.at)}</p>
+                    </div>
+                    {!n.read && <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0 mt-1.5" />}
                   </div>
                 ))
               )}
