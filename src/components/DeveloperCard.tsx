@@ -80,7 +80,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
               </span>
             )}
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">{primaryRole?.title ?? <>&nbsp;</>}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">{primaryRole?.title ?? <>&nbsp;</>}</p>
         </div>
 
         {/* Workload / user status tag */}
@@ -102,17 +102,17 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
           <div className="grid grid-cols-3 divide-x divide-slate-100 border-t border-slate-100">
             <div className="px-3 py-2.5 text-center">
               <p className="text-base font-bold text-slate-800 tabular-nums leading-none">{fmt(dev.todayHours)}h</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">planned</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-1">planned</p>
             </div>
             <div className="px-3 py-2.5 text-center">
               <p className={`text-base font-bold tabular-nums leading-none ${freeToday > 2 ? 'text-brand-600' : 'text-slate-400'}`}>
                 {fmt(freeToday)}h
               </p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">free today</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-1">free today</p>
             </div>
             <div className="px-3 py-2.5 text-center">
               <p className="text-base font-bold text-slate-800 tabular-nums leading-none">{dev.tasks.length}</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">tasks</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-1">tasks</p>
             </div>
           </div>
           <div className="px-4 pb-3">
@@ -147,7 +147,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
                 <span className={`flex-1 truncate text-xs ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
                   {task.title}
                 </span>
-                <span className="text-[11px] text-slate-400 shrink-0 tabular-nums">{fmt(task.estimated_hours)}h</span>
+                <span className="text-[11px] text-slate-500 shrink-0 tabular-nums">{fmt(task.estimated_hours)}h</span>
                 <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 px-2.5 py-1.5 text-xs bg-slate-800 text-white rounded-lg whitespace-normal max-w-[220px] opacity-0 group-hover/task:opacity-100 transition-opacity z-30 shadow-lg leading-snug">
                   {task.title}
                 </div>
@@ -161,7 +161,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
             )}
           </>
         ) : (
-          <p className="text-xs text-slate-300 italic">No tasks today</p>
+          <p className="text-xs text-slate-400 italic">No tasks today</p>
         )}
       </div>
 

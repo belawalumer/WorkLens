@@ -111,6 +111,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
             {navLink('/my-tasks', 'My Tasks')}
             {navLink('/team', 'Team')}
             {userRole === 'super_admin' && navLink('/reports', 'Reports')}
+            {userRole === 'super_admin' && navLink('/settings', 'Settings')}
           </nav>
         </div>
 
@@ -134,7 +135,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-slate-800 leading-none">{userName}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{ROLE_LABELS[userRole]}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{ROLE_LABELS[userRole]}</p>
               </div>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 hidden md:block">
                 <polyline points="6 9 12 15 18 9"/>
@@ -252,7 +253,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
             ['/', 'Dashboard'],
             ['/my-tasks', 'My Tasks'],
             ['/team', 'Team'],
-            ...(userRole === 'super_admin' ? [['/reports', 'Reports']] : []),
+            ...(userRole === 'super_admin' ? [['/reports', 'Reports'], ['/settings', 'Settings']] : []),
           ] as [string, string][]).map(([href, label]) => {
             const active = pathname === href
             return (

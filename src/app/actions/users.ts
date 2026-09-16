@@ -24,6 +24,7 @@ export async function createUser(payload: {
   email: string
   password: string
   role: Role
+  whatsapp?: string | null
 }) {
   const myRole = await getMyRole()
   if (!myRole) throw new Error('Unauthorized')
@@ -39,8 +40,13 @@ export async function createUser(payload: {
   })
   if (error) throw error
 
-  if (payload.role !== 'developer' && data.user) {
-    await admin.from('profiles').update({ role: payload.role }).eq('id', data.user.id)
+  if (data.user) {
+    const profileUpdate: { role?: Role; whatsapp?: string } = {}
+    if (payload.role !== 'developer') profileUpdate.role = payload.role
+    if (payload.whatsapp) profileUpdate.whatsapp = payload.whatsapp
+    if (Object.keys(profileUpdate).length) {
+      await admin.from('profiles').update(profileUpdate).eq('id', data.user.id)
+    }
   }
 
   revalidatePath('/team')
@@ -75,7 +81,7 @@ export async function deleteUser(userId: string) {
   revalidatePath('/team')
 }
 
-export async function updateUserProfile(userId: string, payload: { fullName?: string; email?: string }) {
+export async function updateUserProfile(userId: string, payload: { fullName?: string; email?: string; whatsapp?: string | null }) {
   const myRole = await getMyRole()
   if (!myRole || myRole === 'developer') throw new Error('Unauthorized')
 
@@ -88,12 +94,15 @@ export async function updateUserProfile(userId: string, payload: { fullName?: st
   const authUpdate: { email?: string; user_metadata?: { full_name: string } } = {}
   if (payload.email) authUpdate.email = payload.email
   if (payload.fullName) authUpdate.user_metadata = { full_name: payload.fullName }
-  const { error } = await admin.auth.admin.updateUserById(userId, authUpdate)
-  if (error) throw error
+  if (Object.keys(authUpdate).length) {
+    const { error } = await admin.auth.admin.updateUserById(userId, authUpdate)
+    if (error) throw error
+  }
 
-  const profileUpdate: { full_name?: string; email?: string } = {}
+  const profileUpdate: { full_name?: string; email?: string; whatsapp?: string | null } = {}
   if (payload.fullName) profileUpdate.full_name = payload.fullName
   if (payload.email) profileUpdate.email = payload.email
+  if (payload.whatsapp !== undefined) profileUpdate.whatsapp = payload.whatsapp || null
   if (Object.keys(profileUpdate).length) {
     await admin.from('profiles').update(profileUpdate).eq('id', userId)
   }

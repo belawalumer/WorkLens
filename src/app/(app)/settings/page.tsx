@@ -1,0 +1,20 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import SettingsClient from './SettingsClient'
+
+export const dynamic = 'force-dynamic'
+
+export default async function SettingsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (me?.role !== 'super_admin') redirect('/')
+
+  const { data: settings } = await supabase.from('app_settings').select('key, value')
+
+  const map = Object.fromEntries((settings ?? []).map(s => [s.key, s.value]))
+
+  return <SettingsClient leverageHours={parseFloat(map['leverage_hours'] ?? '176')} />
+}

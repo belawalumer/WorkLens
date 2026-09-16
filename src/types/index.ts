@@ -27,6 +27,7 @@ export interface Profile {
   user_status?: UserStatus
   status_from?: string | null
   status_until?: string | null
+  whatsapp?: string | null
 }
 
 export function formatStatusSub(
