@@ -289,9 +289,10 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
       {/* ── Board ─────────────────────────────────────────────────── */}
       <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 flex-1 items-start">
         {columns.map(col => {
-          const dayTasks = col.isBacklog
+          const dayTasks = (col.isBacklog
             ? tasks.filter(t => !t.task_date)
             : tasks.filter(t => t.task_date === col.date)
+          ).slice().sort((a, b) => Number(a.completed) - Number(b.completed))
           const dayHours = dayTasks.reduce((s, t) => s + t.estimated_hours, 0)
           const doneHours = dayTasks.filter(t => t.completed).reduce((s, t) => s + t.estimated_hours, 0)
           const isToday = !col.isBacklog && col.date === TODAY
