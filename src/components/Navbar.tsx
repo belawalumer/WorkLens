@@ -77,7 +77,10 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
         }
         cur.setDate(cur.getDate() + 1)
       }
-      if (records.length) await supabase.from('leave_records').insert(records)
+      if (records.length) {
+        const { error } = await supabase.from('leave_records').upsert(records, { onConflict: 'developer_id,leave_date', ignoreDuplicates: true })
+        if (error) toast.error(`Leave records: ${error.message}`)
+      }
     }
 
     mutate('profiles')
