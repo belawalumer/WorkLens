@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import MyTasks from './MyTasks'
 import { redirect } from 'next/navigation'
+import { getPKTWeekStart } from '@/lib/date'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,12 +10,7 @@ export default async function MyTasksPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const weekStart = (() => {
-    const d = new Date()
-    const day = d.getDay()
-    d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
-    return d.toISOString().split('T')[0]
-  })()
+  const weekStart = getPKTWeekStart()
 
   const [{ data: tasks }, { data: projects }] = await Promise.all([
     supabase.from('tasks').select('*, project:projects(id, name)')

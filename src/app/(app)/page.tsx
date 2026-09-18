@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Dashboard from './Dashboard'
 import { Role } from '@/types'
+import { getPKTDate } from '@/lib/date'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +9,7 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getPKTDate()
 
   const [{ data: profile }, { data: profiles }, { data: roles }, { data: tasks }, { data: todayHoliday }] = await Promise.all([
     supabase.from('profiles').select('role').eq('id', user?.id ?? '').single(),

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Profile, Task, ROLE_LABELS, Role } from '@/types'
+import { getPKTDate, getPKTWeekStart } from '@/lib/date'
 
 type Period = 'today' | 'week' | 'month' | '3months' | '6months'
 type TaskFilter = 'all' | 'done' | 'pending'
@@ -14,43 +15,32 @@ const initials = (name: string) => {
 }
 
 function getRange(period: Period): { start: string; end: string } {
-  const today = new Date()
-  const end = today.toISOString().split('T')[0]
+  const end = getPKTDate()
   if (period === 'today') return { start: end, end }
-  if (period === 'week') {
-    const d = new Date(today)
-    const day = d.getDay()
-    d.setDate(d.getDate() - day + (day === 0 ? -6 : 1))
-    return { start: d.toISOString().split('T')[0], end }
-  }
-  if (period === 'month') {
-    return { start: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0], end }
-  }
+  if (period === 'week') return { start: getPKTWeekStart(), end }
+  const [y, m] = end.split('-').map(Number)
+  if (period === 'month') return { start: `${y}-${String(m).padStart(2, '0')}-01`, end }
   const months = period === '3months' ? 3 : 6
-  const d = new Date(today)
-  d.setMonth(d.getMonth() - months)
-  return { start: d.toISOString().split('T')[0], end }
+  let sm = m - months, sy = y
+  while (sm <= 0) { sm += 12; sy-- }
+  return { start: `${sy}-${String(sm).padStart(2, '0')}-01`, end }
 }
 
 function getFixedRanges() {
-  const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
-  const weekStart = new Date(today)
-  const day = weekStart.getDay()
-  weekStart.setDate(weekStart.getDate() - day + (day === 0 ? -6 : 1))
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
-  return { todayStr, weekStart: weekStart.toISOString().split('T')[0], monthStart }
+  const todayStr = getPKTDate()
+  const [y, m] = todayStr.split('-').map(Number)
+  return { todayStr, weekStart: getPKTWeekStart(), monthStart: `${y}-${String(m).padStart(2, '0')}-01` }
 }
 
 function getMonthlyHistory(tasks: Task[], devId: string, holidayDates: string[], leaveRecords: LeaveRow[]) {
-  const now = new Date()
-  const todayStr = now.toISOString().split('T')[0]
+  const todayStr = getPKTDate()
+  const [ty, tm] = todayStr.split('-').map(Number)
   return Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
-    const year = d.getFullYear()
-    const month = d.getMonth()
-    const start = d.toISOString().split('T')[0]
-    const end = new Date(year, month + 1, 0).toISOString().split('T')[0]
+    let month = tm - (5 - i), year = ty
+    while (month <= 0) { month += 12; year-- }
+    const start = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
     const isFuture = start > todayStr
     const mt = tasks.filter(t => t.developer_id === devId && t.task_date && t.task_date >= start && t.task_date <= end)
     const hours = mt.reduce((s, t) => s + t.estimated_hours, 0)
@@ -64,7 +54,7 @@ function getMonthlyHistory(tasks: Task[], devId: string, holidayDates: string[],
     const workingDays = workingDaysInMonth(year, month, holidayDates)
     const target = Math.max(0, workingDays * 8 - leaveHours)
     return {
-      label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      label: new Date(year, month - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
       hours, tasks: mt.length, done,
       pct: mt.length ? Math.round((done / mt.length) * 100) : 0,
       target, isFuture,

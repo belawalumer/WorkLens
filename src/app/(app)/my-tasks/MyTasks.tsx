@@ -7,10 +7,11 @@ import { Task } from '@/types'
 import { toast } from '@/lib/toast'
 import DatePicker from '@/components/DatePicker'
 
-const TODAY = new Date().toISOString().split('T')[0]
-const YESTERDAY = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()
-const TOMORROW = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
-const WEEK_START = (() => { const d = new Date(); d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1)); return d.toISOString().split('T')[0] })()
+import { getPKTDate, getPKTDateOffset, getPKTWeekStart } from '@/lib/date'
+const TODAY      = getPKTDate()
+const YESTERDAY  = getPKTDateOffset(-1)
+const TOMORROW   = getPKTDateOffset(1)
+const WEEK_START = getPKTWeekStart()
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
 

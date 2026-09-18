@@ -3,13 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import Navbar from '@/components/Navbar'
 import RealtimeProvider from '@/components/RealtimeProvider'
 import { Role, UserStatus, WorkloadStatus, getWorkloadStatus, effectiveStatus } from '@/types'
+import { getPKTDate } from '@/lib/date'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getPKTDate()
   const [{ data: profile }, { data: todayTasks }] = await Promise.all([
     supabase.from('profiles').select('full_name, role, user_status, status_from, status_until, assist_until').eq('id', user.id).single(),
     supabase.from('tasks').select('estimated_hours').eq('developer_id', user.id).eq('task_date', today),

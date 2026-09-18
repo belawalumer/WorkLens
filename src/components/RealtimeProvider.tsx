@@ -6,10 +6,35 @@ import { createClient } from '@/lib/supabase/client'
 import { Task, Profile } from '@/types'
 import { toast } from '@/lib/toast'
 
-const TODAY = new Date().toISOString().split('T')[0]
+function msUntilMidnightPlus1(): number {
+  const now = new Date()
+  const next = new Date(now)
+  next.setDate(now.getDate() + 1)
+  next.setHours(0, 1, 0, 0) // 12:01 AM
+  return next.getTime() - now.getTime()
+}
+
+function scheduleMidnight(fn: () => void): () => void {
+  let id: ReturnType<typeof setTimeout>
+  function schedule() {
+    id = setTimeout(() => { fn(); schedule() }, msUntilMidnightPlus1())
+  }
+  schedule()
+  return () => clearTimeout(id)
+}
 
 export default function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
+
+  // Midnight reset — fires every night, mutates all date-sensitive SWR keys
+  // so every open client snaps to the new day without a page reload
+  useEffect(() => {
+    return scheduleMidnight(() => {
+      mutate('dashboard-tasks')
+      mutate('today-leaves')
+      mutate('profiles')
+    })
+  }, [])
 
   useEffect(() => {
     const channel = supabase

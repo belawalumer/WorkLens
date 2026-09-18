@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, isAssisting, isDevRole } from '@/types'
+import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, isAssisting, isDevRole, effectiveStatus } from '@/types'
 import DeveloperCard from '@/components/DeveloperCard'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
@@ -24,20 +24,24 @@ interface Props {
 
 type FilterStatus = 'all' | 'available' | 'full' | 'underloaded' | 'overloaded' | 'assisting'
 
-const TODAY = new Date().toISOString().split('T')[0]
+import { getPKTDate } from '@/lib/date'
+const getToday = getPKTDate
 
 function buildDeveloperData(
   profiles: Profile[],
   roles: DeveloperRole[],
   tasks: Task[],
 ): DeveloperWithData[] {
+  const today = getToday()
   return profiles.map(profile => {
     const devRoles = roles.filter(r => r.developer_id === profile.id)
-    const todayTasks = tasks.filter(t => t.developer_id === profile.id && t.task_date === TODAY)
+    const todayTasks = tasks.filter(t => t.developer_id === profile.id && t.task_date === today)
     const todayHours = todayTasks.reduce((s, t) => s + t.estimated_hours, 0)
     const completedHours = todayTasks.filter(t => t.completed).reduce((s, t) => s + t.estimated_hours, 0)
+    const resolvedUserStatus = effectiveStatus((profile.user_status ?? 'active') as UserStatus, profile.status_until, today)
     return {
       ...profile,
+      user_status: resolvedUserStatus,
       roles: devRoles,
       tasks: todayTasks,
       todayHours,
@@ -111,13 +115,13 @@ export default function Dashboard({
 
   const { data: todayLeaves = [] } = useSWR<{ developer_id: string; leave_type: string }[]>(
     'today-leaves',
-    async () => (await supabase.from('leave_records').select('developer_id, leave_type').eq('leave_date', TODAY)).data ?? [],
+    async () => (await supabase.from('leave_records').select('developer_id, leave_type').eq('leave_date', getToday())).data ?? [],
     { revalidateOnFocus: true },
   )
 
   const { data: tasks = initTasks } = useSWR(
     'dashboard-tasks',
-    async () => (await supabase.from('tasks').select('*, project:projects(id, name)').eq('task_date', TODAY)).data ?? [],
+    async () => (await supabase.from('tasks').select('*, project:projects(id, name)').eq('task_date', getToday())).data ?? [],
     { fallbackData: initTasks, revalidateOnFocus: true },
   )
   const { data: profiles = initProfiles } = useSWR(

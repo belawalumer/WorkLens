@@ -7,6 +7,7 @@ import { mutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub, UNAVAILABLE_STATUSES, isAssisting, formatAssistRemaining, WorkloadStatus } from '@/types'
 import { toast } from '@/lib/toast'
+import { getPKTDate } from '@/lib/date'
 
 const initials = (name: string) => {
   const p = name.trim().split(/\s+/)
@@ -26,7 +27,7 @@ interface Props {
   workloadStatus: WorkloadStatus
 }
 
-const TODAY = new Date().toISOString().split('T')[0]
+const TODAY = getPKTDate()
 
 export default function Navbar({ userName, userRole, userId, userStatus, statusFrom, statusUntil, assistUntil, workloadStatus }: Props) {
   const pathname = usePathname()
@@ -59,6 +60,31 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
     const id = setInterval(() => setNow(Date.now()), 30_000)
     return () => clearInterval(id)
   }, [localAssistUntil])
+
+  // Clear expired on_leave/vacation at 12:01 AM without page reload.
+  // Reschedules every night so multi-day leave clears on the correct morning.
+  useEffect(() => {
+    if (status !== 'on_leave' && status !== 'vacation') return
+    let id: ReturnType<typeof setTimeout>
+    function schedule() {
+      const now = new Date()
+      const next = new Date(now)
+      next.setDate(now.getDate() + 1)
+      next.setHours(0, 1, 0, 0)
+      id = setTimeout(() => {
+        const today = getPKTDate()
+        if (until && until < today) {
+          setStatus('active')
+          setFrom('')
+          setUntil('')
+        } else {
+          schedule() // still on leave, check again tomorrow
+        }
+      }, next.getTime() - now.getTime())
+    }
+    schedule()
+    return () => clearTimeout(id)
+  }, [status, until])
 
   async function startAssist(minutes: number) {
     if (!minutes) return

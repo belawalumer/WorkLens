@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Role } from '@/types'
+import { getPKTDate } from '@/lib/date'
 
 interface InactivePerson {
   id: string
@@ -28,7 +29,7 @@ export default function InactiveSidebar({ userRole, userId }: { userRole: Role; 
   const supabase = createClient()
 
   useEffect(() => {
-    const TODAY = new Date().toISOString().split('T')[0]
+    const TODAY = getPKTDate()
 
     async function check() {
       if (!isPKTCheckTime()) { setInactive([]); return }

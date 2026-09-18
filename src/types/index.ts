@@ -21,7 +21,7 @@ export const UNAVAILABLE_STATUSES: UserStatus[] = ['on_leave', 'vacation']
 export function effectiveStatus(
   status: UserStatus,
   statusUntil?: string | null,
-  today = new Date().toISOString().split('T')[0],
+  today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Karachi' }).format(new Date()),
 ): UserStatus {
   if ((status === 'on_leave' || status === 'vacation') && statusUntil && statusUntil < today) return 'active'
   return status
