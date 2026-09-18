@@ -243,7 +243,8 @@ export default function Dashboard({
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Status Distribution</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {(Object.entries(STATUS_DISTRIBUTION) as [WorkloadStatus, { label: string; color: string }][]).map(([key, s]) => {
-              const count = developers.filter(d => d.status === key).length
+              const devsInStatus = developers.filter(d => d.status === key)
+              const count = devsInStatus.length
               const pct = developers.length > 0 ? (count / developers.length) * 100 : 0
               return (
                 <div key={key} className="flex items-center gap-3">
@@ -251,7 +252,15 @@ export default function Dashboard({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-slate-600">{s.label}</span>
-                      <span className="text-xs font-bold text-slate-800">{count}</span>
+                      <div className="relative group/tip">
+                        <span className="text-xs font-bold text-slate-800 cursor-default">{count}</span>
+                        {count > 0 && (
+                          <div className="absolute right-0 bottom-full mb-2 hidden group-hover/tip:block z-20 bg-slate-900 text-white text-[11px] rounded-lg px-3 py-2 shadow-xl w-max max-w-52 space-y-0.5 pointer-events-none">
+                            {devsInStatus.map(d => <div key={d.id} className="whitespace-nowrap">{d.full_name}</div>)}
+                            <div className="absolute right-2 top-full border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-slate-900" />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
                       <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: s.color }} />
