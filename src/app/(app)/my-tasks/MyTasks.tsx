@@ -312,11 +312,6 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                     {dayTasks.length}
                   </span>
                 </div>
-                {dayHours > 0 && (
-                  <span className={`text-xs font-semibold ${isToday ? 'text-white/80' : 'text-slate-500'}`}>
-                    {fmt(doneHours)}/{fmt(dayHours)}h
-                  </span>
-                )}
               </div>
 
               {/* Progress bar */}
