@@ -204,7 +204,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
       {/* ── Role summary cards ─────────────────────────────────── */}
       <div className={`grid grid-cols-${summaryCards.length} gap-3 mb-5`}>
         {summaryCards.map(([role, icon, label]) => (
-          <div key={role} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center shadow-sm">
+          <div key={role} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center">
             <p className="text-lg">{icon}</p>
             <p className="text-2xl font-bold text-slate-900 mt-0.5">{counts[role]}</p>
             <p className="text-xs text-slate-500 mt-0.5">{label}</p>
@@ -234,7 +234,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
 
       {/* ── Add form ────────────────────────────────────────────── */}
       {adding && (
-        <form onSubmit={handleCreate} className="bg-white border border-brand-200 rounded-2xl p-5 mb-5 space-y-4 shadow-sm">
+        <form onSubmit={handleCreate} className="bg-white border border-brand-200 rounded-2xl p-5 mb-5 space-y-4">
           <h2 className="font-bold text-slate-800">New team member</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -301,7 +301,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
       </div>
 
       {/* ── Members table ───────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className={`hidden sm:grid ${gridCls} gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200`}>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Member</span>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Role</span>

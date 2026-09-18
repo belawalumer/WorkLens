@@ -141,7 +141,7 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         {/* Table header */}
         <div className="hidden sm:grid sm:grid-cols-[1fr_88px_72px_72px_120px_36px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
           <span>Developer</span>
@@ -270,7 +270,7 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
                       <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                         Tasks — This Month
                       </p>
-                      <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden text-xs shadow-sm">
+                      <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden text-xs">
                         {(['all', 'done', 'pending'] as TaskFilter[]).map(f => (
                           <button key={f} onClick={e => { e.stopPropagation(); setTaskFilter(f) }}
                             className={`px-2.5 py-1 font-medium transition-colors capitalize ${taskFilter === f ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}>

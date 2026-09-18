@@ -69,7 +69,7 @@ function StatCard({
     : 'border-l-slate-200'
 
   return (
-    <div className={`relative group bg-white border border-slate-200 border-l-4 ${border} rounded-2xl px-5 py-4 shadow-sm`}>
+    <div className={`relative group bg-white border border-slate-200 border-l-4 ${border} rounded-2xl px-5 py-4`}>
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{label}</p>
       <p className="text-3xl font-bold text-slate-900 mt-1 tabular-nums">{value}</p>
       {sub && (
@@ -358,12 +358,12 @@ export default function Dashboard({
 
       {/* ── Member cards ─────────────────────────────────────────────── */}
       <div className="border-t border-slate-200 pt-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
             {filter === 'all' ? 'All Members' : filter === 'available' ? 'Available' : filter === 'full' ? 'Occupied' : filter === 'underloaded' ? 'Underloaded' : filter === 'assisting' ? 'Open to help' : 'Overloaded'}
             {' '}· {filtered.length}
           </h2>
-          <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden text-sm shadow-sm">
+          <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden text-sm">
             {([
               { key: 'all',        label: 'All' },
               { key: 'available',  label: 'Available' },

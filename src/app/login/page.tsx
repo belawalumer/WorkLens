@@ -56,7 +56,7 @@ export default function LoginPage() {
           <p className="text-slate-500 mt-1 text-sm">Developer workload dashboard</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-7">
+        <div className="bg-white rounded-2xl border border-slate-200 p-7">
           <h2 className="text-base font-semibold text-slate-800 mb-5">
             {/* {mode === 'login' ? 'Sign in to your account' : 'Create your account'} */}
             Sign in to your account

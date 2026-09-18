@@ -341,7 +341,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                   </div>
                 ) : (
                   dayTasks.map(task => (
-                    <div key={task.id} className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow transition-shadow">
+                    <div key={task.id} className="bg-white border border-slate-200 rounded-xl">
                       <div className="flex items-start gap-2.5 px-3 py-2.5">
 
                         {/* Checkbox */}

@@ -84,7 +84,7 @@ export default function NotificationsClient({ notifications }: { notifications: 
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden">
           {filters.map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
               className={`px-3 py-1.5 text-sm font-medium transition-colors ${filter === f.key ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
@@ -99,7 +99,7 @@ export default function NotificationsClient({ notifications }: { notifications: 
 
       {/* List */}
       {groups.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl py-16 text-center shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl py-16 text-center">
           <p className="text-slate-600 font-medium">No notifications found</p>
           <p className="text-slate-400 text-sm mt-1">Try a different filter</p>
         </div>
@@ -108,7 +108,7 @@ export default function NotificationsClient({ notifications }: { notifications: 
           {groups.map(([label, items]) => (
             <div key={label}>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{label}</p>
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
                 {items.map(n => (
                   <div key={n.id} className="flex items-start gap-3 px-5 py-4">
                     <span className="text-lg shrink-0 mt-0.5">{TYPE_ICON[n.type] ?? '🔔'}</span>

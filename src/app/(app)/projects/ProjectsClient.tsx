@@ -113,7 +113,7 @@ export default function ProjectsClient({
           <p className="text-slate-400 text-xs mt-1">Add your first project above</p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
           {projects.map(p => (
             <div key={p.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors">
               {/* Color dot */}

@@ -112,7 +112,7 @@ export default function SettingsClient({
       </div>
 
       {/* ── Public holidays ─────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-700">Public Holidays</h2>
@@ -168,7 +168,7 @@ export default function SettingsClient({
       </div>
 
       {/* ── Leave records ────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
         <div>
           <h2 className="text-sm font-semibold text-slate-700">Developer Leaves</h2>
           <p className="text-xs text-slate-500 mt-0.5">Leave days are deducted from each developer's monthly expected hours in Reports.</p>
