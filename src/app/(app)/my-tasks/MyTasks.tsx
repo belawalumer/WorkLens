@@ -20,7 +20,8 @@ function colLabel(date: string) {
   return new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-function dateChipLabel(date: string) {
+function dateChipLabel(date: string | null) {
+  if (!date) return 'Backlog'
   if (date === TODAY) return 'Today'
   if (date === YESTERDAY) return 'Yesterday'
   if (date === TOMORROW) return 'Tomorrow'
@@ -32,13 +33,13 @@ interface EstimateEdit { taskId: string; originalHours: number; hours: string; r
 
 export default function MyTasks({ initialTasks, initialProjects, userId }: Props) {
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ title: '', estimated_hours: '1', task_date: TODAY, project_id: '' })
+  const [form, setForm] = useState({ title: '', estimated_hours: '1', task_date: TODAY, project_id: '', inBacklog: false })
   const [saving, setSaving] = useState(false)
   const [projOpen, setProjOpen] = useState(false)
   const [projSearch, setProjSearch] = useState('')
   const [estimateEdit, setEstimateEdit] = useState<EstimateEdit | null>(null)
   const [editingTitle, setEditingTitle] = useState<{ taskId: string; title: string } | null>(null)
-  const [dateEdit, setDateEdit] = useState<{ taskId: string; date: string } | null>(null)
+  const [dateEdit, setDateEdit] = useState<{ taskId: string; date: string | null } | null>(null)
   const [projectEdit, setProjectEdit] = useState<string | null>(null)
   const [projectEditPos, setProjectEditPos] = useState<{ top: number; left: number } | null>(null)
   const supabase = createClient()
@@ -53,7 +54,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
     ['my-tasks', userId],
     async () => (await supabase.from('tasks').select('*, project:projects(id, name)')
       .eq('developer_id', userId)
-      .gte('task_date', WEEK_START)
+      .or(`task_date.gte.${WEEK_START},task_date.is.null`)
       .order('task_date', { ascending: false })
       .order('created_at', { ascending: false })).data ?? [],
     { fallbackData: initialTasks, revalidateOnFocus: true },
@@ -77,8 +78,8 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
     return () => { supabase.removeChannel(channel) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function openModal(date?: string) {
-    setForm(f => ({ ...f, task_date: date ?? TODAY, title: '', project_id: '' }))
+  function openModal(date?: string, backlog = false) {
+    setForm(f => ({ ...f, task_date: date ?? TODAY, title: '', project_id: '', inBacklog: backlog }))
     setProjOpen(false)
     setProjSearch('')
     setShowModal(true)
@@ -104,7 +105,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
       title: form.title.trim(),
       estimated_hours: parseFloat(form.estimated_hours) || 1,
       completed: false,
-      task_date: form.task_date,
+      task_date: form.inBacklog ? null : form.task_date,
       estimate_change_reason: null,
     }
     mutateTasks(prev => [tempTask, ...(prev ?? [])], false)
@@ -193,15 +194,14 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
     setDateEdit({ taskId: task.id, date: task.task_date })
   }
 
-  async function saveDate(taskId: string, newDate: string) {
-    if (!newDate) { setDateEdit(null); return }
+  async function saveDate(taskId: string, newDate: string | null) {
     const task = tasks.find(t => t.id === taskId)
     if (!task || task.task_date === newDate) { setDateEdit(null); return }
     mutateTasks(prev => (prev ?? []).map(t => t.id === taskId ? { ...t, task_date: newDate } : t), false)
     setDateEdit(null)
     await supabase.from('tasks').update({ task_date: newDate }).eq('id', taskId)
     mutateTasks()
-    toast.success('Task moved')
+    toast.success(newDate ? 'Task moved' : 'Moved to backlog')
   }
 
   const todayTasks = tasks.filter(t => t.task_date === TODAY)
@@ -210,10 +210,18 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
   const freeToday  = Math.max(0, 8 - totalToday)
 
   const groupedDates = useMemo(() => {
-    const dateSet = new Set(tasks.map(t => t.task_date).filter(d => d >= WEEK_START))
+    const dateSet = new Set<string>()
+    for (const t of tasks) {
+      if (t.task_date && t.task_date >= WEEK_START) dateSet.add(t.task_date)
+    }
     dateSet.add(TODAY)
     return Array.from(dateSet).sort((a, b) => b.localeCompare(a))
   }, [tasks])
+
+  const columns = useMemo(() => [
+    { key: 'backlog', date: null as string | null, isBacklog: true },
+    ...groupedDates.map(date => ({ key: date, date, isBacklog: false })),
+  ], [groupedDates])
 
   const selectedProjName = projects.find(p => p.id === form.project_id)?.name
 
@@ -280,20 +288,22 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
 
       {/* ── Board ─────────────────────────────────────────────────── */}
       <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 flex-1 items-start">
-        {groupedDates.map(date => {
-          const dayTasks = tasks.filter(t => t.task_date === date)
+        {columns.map(col => {
+          const dayTasks = col.isBacklog
+            ? tasks.filter(t => !t.task_date)
+            : tasks.filter(t => t.task_date === col.date)
           const dayHours = dayTasks.reduce((s, t) => s + t.estimated_hours, 0)
           const doneHours = dayTasks.filter(t => t.completed).reduce((s, t) => s + t.estimated_hours, 0)
-          const isToday = date === TODAY
+          const isToday = !col.isBacklog && col.date === TODAY
 
           return (
-            <div key={date} className="flex-none w-72 flex flex-col">
+            <div key={col.key} className="flex-none w-72 flex flex-col">
 
               {/* Column header */}
               <div className={`flex items-center justify-between px-3 py-2.5 rounded-t-2xl border border-b-0 ${isToday ? 'bg-brand-600 border-brand-600' : 'bg-slate-100 border-slate-200'}`}>
                 <div className="flex items-center gap-2">
                   <span className={`text-sm font-bold ${isToday ? 'text-white' : 'text-slate-700'}`}>
-                    {colLabel(date)}
+                    {col.isBacklog ? 'Backlog' : colLabel(col.date!)}
                   </span>
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isToday ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'}`}>
                     {dayTasks.length}
@@ -316,7 +326,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                 {dayTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <p className="text-slate-400 text-xs">No tasks yet</p>
-                    <button onClick={() => openModal(date)}
+                    <button onClick={() => openModal(col.date ?? undefined, col.isBacklog)}
                       className="mt-1.5 text-brand-600 text-xs font-semibold hover:text-brand-800">
                       + Add one
                     </button>
@@ -373,10 +383,13 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                             }`}>
                             {fmt(task.estimated_hours)}h
                           </button>
-                          {/* Date chip — click to move task to another day */}
+                          {/* Date chip — click to move task to another day or backlog */}
                           {dateEdit?.taskId === task.id ? (
-                            <DatePicker compact value={dateEdit!.date}
-                              onChange={v => { if (v !== task.task_date) saveDate(task.id, v); else setDateEdit(null) }} />
+                            <DatePicker compact allowBacklog
+                              value={dateEdit!.date ?? ''}
+                              placeholder="Backlog"
+                              onChange={v => { if (v !== (task.task_date ?? '')) saveDate(task.id, v); else setDateEdit(null) }}
+                              onBacklog={() => { if (task.task_date !== null) saveDate(task.id, null); else setDateEdit(null) }} />
                           ) : (
                             <button
                               onClick={() => openDateEdit(task)}
@@ -452,7 +465,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                   onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                   className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50 transition-colors" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className={`grid gap-3 ${form.inBacklog ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 <div>
                   <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Hours</label>
                   <div className="flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus-within:ring-2 focus-within:ring-brand-400 transition-colors">
@@ -462,11 +475,25 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                     <span className="text-xs text-slate-400 shrink-0">h</span>
                   </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Date</label>
-                  <DatePicker value={form.task_date} onChange={v => setForm(f => ({ ...f, task_date: v }))} />
-                </div>
+                {!form.inBacklog && (
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Date</label>
+                    <DatePicker value={form.task_date} onChange={v => setForm(f => ({ ...f, task_date: v }))} />
+                  </div>
+                )}
               </div>
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input type="checkbox" checked={form.inBacklog}
+                  onChange={e => {
+                    const checked = e.target.checked
+                    setForm(f => ({ ...f, inBacklog: checked, task_date: checked ? f.task_date : (f.task_date || TODAY) }))
+                  }}
+                  className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-400" />
+                <span>
+                  <span className="text-xs font-semibold text-slate-700">Save to backlog</span>
+                  <span className="block text-[11px] text-slate-400">Date is optional — task stays in the Backlog column</span>
+                </span>
+              </label>
               {projects.length > 0 && (
                 <div>
                   <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Project</label>
