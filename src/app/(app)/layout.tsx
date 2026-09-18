@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, role, user_status, status_from, status_until')
+    .select('full_name, role, user_status, status_from, status_until, assist_until')
     .eq('id', user.id)
     .single()
 
@@ -24,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         userStatus={(profile?.user_status as UserStatus) ?? 'active'}
         statusFrom={profile?.status_from ?? null}
         statusUntil={profile?.status_until ?? null}
+        assistUntil={profile?.assist_until ?? null}
       />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <RealtimeProvider>{children}</RealtimeProvider>

@@ -5,8 +5,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useRef, useState, useEffect } from 'react'
 import { mutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
-import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
+import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub, UNAVAILABLE_STATUSES, isAssisting, formatAssistRemaining } from '@/types'
 import { toast } from '@/lib/toast'
+
+const ASSIST_PRESETS = [1, 2, 3, 4] as const
 
 const initials = (name: string) => {
   const p = name.trim().split(/\s+/)
@@ -22,11 +24,12 @@ interface Props {
   userStatus: UserStatus
   statusFrom: string | null
   statusUntil: string | null
+  assistUntil: string | null
 }
 
 const TODAY = new Date().toISOString().split('T')[0]
 
-export default function Navbar({ userName, userRole, userId, userStatus, statusFrom, statusUntil }: Props) {
+export default function Navbar({ userName, userRole, userId, userStatus, statusFrom, statusUntil, assistUntil }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -38,8 +41,44 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
   const [pendingStatus, setPendingStatus] = useState<UserStatus | null>(null)
   const [pendingFrom, setPendingFrom] = useState(TODAY)
   const [pendingUntil, setPendingUntil] = useState(TODAY)
+  const [localAssistUntil, setLocalAssistUntil] = useState<string | null>(assistUntil)
+  const [now, setNow] = useState(() => Date.now())
+  const [assistOpen, setAssistOpen] = useState(false)
+  const [assistSaving, setAssistSaving] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const assistRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+
+  const assisting = isAssisting(localAssistUntil, now)
+  const canStartAssist = !assisting && !UNAVAILABLE_STATUSES.includes(status)
+
+  useEffect(() => {
+    if (!localAssistUntil) return
+    const id = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [localAssistUntil])
+
+  async function startAssist(hours: number) {
+    setAssistSaving(true)
+    const until = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
+    const { error } = await supabase.from('profiles').update({ assist_until: until }).eq('id', userId)
+    setAssistSaving(false)
+    if (error) { toast.error(error.message); return }
+    setLocalAssistUntil(until)
+    setAssistOpen(false)
+    mutate('profiles')
+    toast.success(`You're available for ${hours}h`)
+  }
+
+  async function endAssist() {
+    setAssistSaving(true)
+    const { error } = await supabase.from('profiles').update({ assist_until: null }).eq('id', userId)
+    setAssistSaving(false)
+    if (error) { toast.error(error.message); return }
+    setLocalAssistUntil(null)
+    mutate('profiles')
+    toast.success('Availability ended')
+  }
 
   function signOut() {
     setSigningOut(true)
@@ -103,9 +142,8 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false)
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false)
+      if (assistRef.current && !assistRef.current.contains(e.target as Node)) setAssistOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -150,6 +188,46 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
 
         {/* Right side */}
         <div className="flex items-center gap-2">
+          {/* Assist availability */}
+          {assisting ? (
+            <button
+              type="button"
+              disabled={assistSaving}
+              onClick={endAssist}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {formatAssistRemaining(localAssistUntil!, now)} · End
+            </button>
+          ) : canStartAssist && (
+            <div className="relative hidden sm:block" ref={assistRef}>
+              <button
+                type="button"
+                onClick={() => setAssistOpen(o => !o)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+              >
+                I&apos;m open to help
+              </button>
+              {assistOpen && (
+                <div className="absolute right-0 top-10 w-52 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 space-y-2">
+                  <p className="text-[11px] font-semibold text-slate-500 text-center">Available for how long?</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {ASSIST_PRESETS.map(h => (
+                      <button key={h} type="button" disabled={assistSaving} onClick={() => startAssist(h)}
+                        className="text-xs font-semibold py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors disabled:opacity-50">
+                        {h}h
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" onClick={() => setAssistOpen(false)}
+                    className="w-full text-[11px] text-slate-500 hover:text-slate-700 py-1">
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {userRole !== 'hr_admin' && <NotificationBell userRole={userRole} userId={userId} />}
 
           {/* User dropdown */}
@@ -297,7 +375,37 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
               </Link>
             )
           })}
-          <div className="pt-2 border-t border-slate-100 mt-2">
+          <div className="pt-2 border-t border-slate-100 mt-2 space-y-1">
+            {assisting ? (
+              <button type="button" disabled={assistSaving} onClick={() => { endAssist(); setMobileMenuOpen(false) }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {formatAssistRemaining(localAssistUntil!, now)} · End availability
+              </button>
+            ) : canStartAssist && (
+              assistOpen ? (
+                <div className="px-1 space-y-2">
+                  <p className="text-[11px] font-semibold text-slate-500 text-center px-2">Available for how long?</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {ASSIST_PRESETS.map(h => (
+                      <button key={h} type="button" disabled={assistSaving} onClick={() => { startAssist(h); setMobileMenuOpen(false) }}
+                        className="text-xs font-semibold py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors disabled:opacity-50">
+                        {h}h
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" onClick={() => setAssistOpen(false)}
+                    className="w-full text-[11px] text-slate-500 hover:text-slate-700 py-1">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setAssistOpen(true)}
+                  className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                  I&apos;m open to help
+                </button>
+              )
+            )}
             <button onClick={signOut} disabled={signingOut}
               className="w-full text-left px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors font-medium disabled:opacity-50">
               {signingOut ? 'Signing out…' : 'Sign out'}

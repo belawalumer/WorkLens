@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { mutate } from 'swr'
-import { createClient } from '@/lib/supabase/client'
 import {
   DeveloperWithData,
   Role,
@@ -16,15 +14,12 @@ import {
   formatAssistRemaining,
 } from '@/types'
 import Link from 'next/link'
-import { toast } from '@/lib/toast'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
 const initials = (name: string) => {
   const p = name.trim().split(/\s+/)
   return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
 }
-
-const ASSIST_PRESETS = [1, 2, 3, 4] as const
 
 interface Props {
   dev: DeveloperWithData
@@ -54,53 +49,34 @@ const BAR_BG: Record<string, string> = {
 
 export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
   const [expanded, setExpanded] = useState(false)
-  const [picking, setPicking] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [now, setNow] = useState(() => Date.now())
 
-  const primaryRole    = dev.roles[0]
-  const showRoleBadge  = viewerRole !== 'developer' && dev.role !== 'developer'
-  const isUnavailable  = UNAVAILABLE_STATUSES.includes((dev.user_status ?? 'active') as UserStatus)
-  const freeToday      = Math.max(0, dev.freeHours)
-  const fillPct        = Math.min(100, (dev.todayHours / 8) * 100)
-  const assisting      = isAssisting(dev.assist_until, now)
-  const canStartAssist = isMe && !assisting && !isUnavailable && (dev.status === 'available' || dev.status === 'underloaded')
-  const topBorder      = assisting
+  const primaryRole   = dev.roles[0]
+  const showRoleBadge = viewerRole !== 'developer' && dev.role !== 'developer'
+  const isUnavailable = UNAVAILABLE_STATUSES.includes((dev.user_status ?? 'active') as UserStatus)
+  const freeToday     = Math.max(0, dev.freeHours)
+  const fillPct       = Math.min(100, (dev.todayHours / 8) * 100)
+  const assisting     = isAssisting(dev.assist_until, now)
+  const topBorder     = assisting
     ? 'border-t-emerald-500'
     : isMe ? 'border-t-green-400' : isUnavailable ? 'border-t-slate-200' : (TOP_BORDER[dev.status] ?? 'border-t-slate-200')
 
   useEffect(() => {
     if (!dev.assist_until) return
-    const tick = () => setNow(Date.now())
-    const id = setInterval(tick, 30_000)
-    tick()
+    const id = setInterval(() => setNow(Date.now()), 30_000)
     return () => clearInterval(id)
   }, [dev.assist_until])
 
-  async function startAssist(hours: number) {
-    setSaving(true)
-    const until = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
-    const supabase = createClient()
-    const { error } = await supabase.from('profiles').update({ assist_until: until }).eq('id', dev.id)
-    setSaving(false)
-    if (error) { toast.error(error.message); return }
-    setPicking(false)
-    mutate('profiles')
-    toast.success(`You're available for ${hours}h`)
-  }
-
-  async function endAssist() {
-    setSaving(true)
-    const supabase = createClient()
-    const { error } = await supabase.from('profiles').update({ assist_until: null }).eq('id', dev.id)
-    setSaving(false)
-    if (error) { toast.error(error.message); return }
-    mutate('profiles')
-    toast.success('Availability ended')
-  }
-
   return (
-    <div className={`bg-white rounded-2xl border border-slate-200 border-t-4 flex flex-col transition-opacity ${topBorder} ${isUnavailable ? 'opacity-60' : ''} ${assisting ? 'ring-1 ring-emerald-200' : ''}`}>
+    <div className={`relative overflow-visible bg-white rounded-2xl border border-slate-200 border-t-4 flex flex-col transition-opacity ${topBorder} ${isUnavailable ? 'opacity-60' : ''} ${assisting ? 'ring-1 ring-emerald-200' : ''}`}>
+
+      {/* ── Assist badge — straddles the top border ───────────── */}
+      {assisting && dev.assist_until && (
+        <div className="absolute top-0 -translate-y-1/2 left-4 z-10 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500 text-white shadow-sm pointer-events-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
+          Open to help · {formatAssistRemaining(dev.assist_until, now)}
+        </div>
+      )}
 
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="px-4 pt-4 pb-3 flex items-start gap-3 min-h-[112px]">
@@ -133,12 +109,6 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
             )}
           </div>
           <p className="text-[11px] text-slate-500 mt-0.5">{primaryRole?.title ?? <>&nbsp;</>}</p>
-          {assisting && dev.assist_until && (
-            <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Open to help · {formatAssistRemaining(dev.assist_until, now)}
-            </span>
-          )}
         </div>
 
         {/* Workload / user status tag */}
@@ -231,52 +201,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
 
       {/* ── Me footer ─────────────────────────────────────────── */}
       {isMe && (
-        <div className="px-4 pb-4 border-t border-slate-100 pt-3 space-y-2">
-          {assisting ? (
-            <button
-              type="button"
-              disabled={saving}
-              onClick={endAssist}
-              className="w-full text-center text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl py-2 transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Updating…' : 'End availability'}
-            </button>
-          ) : canStartAssist && (
-            picking ? (
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold text-slate-500 text-center">Available for how long?</p>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {ASSIST_PRESETS.map(h => (
-                    <button
-                      key={h}
-                      type="button"
-                      disabled={saving}
-                      onClick={() => startAssist(h)}
-                      className="text-xs font-semibold py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors disabled:opacity-50"
-                    >
-                      {h}h
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => setPicking(false)}
-                  className="w-full text-[11px] text-slate-500 hover:text-slate-700 py-1"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setPicking(true)}
-                className="w-full text-center text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl py-2 transition-colors"
-              >
-                I&apos;m available to help
-              </button>
-            )
-          )}
+        <div className="px-4 pb-4 border-t border-slate-100 pt-3">
           <Link href="/my-tasks"
             className="block text-center text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-xl py-2 transition-colors">
             Manage my tasks →
