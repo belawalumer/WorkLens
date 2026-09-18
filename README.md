@@ -38,6 +38,7 @@
 - Inline title editing — click any task title to edit
 - Clickable project badge on each card to change the project instantly
 - Hours badge opens an estimate edit panel (requires a reason when changing hours)
+- Inline date chip on each card to move the task to any other day (locked once the task is completed)
 - Task completion toggle
 - Realtime sync via Supabase Postgres changes subscription
 - Today's summary bar: planned · done · free hours

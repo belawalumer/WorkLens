@@ -8,6 +8,7 @@ import { toast } from '@/lib/toast'
 
 const TODAY = new Date().toISOString().split('T')[0]
 const YESTERDAY = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()
+const TOMORROW = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
 
@@ -15,6 +16,13 @@ function colLabel(date: string) {
   if (date === TODAY) return 'Today'
   if (date === YESTERDAY) return 'Yesterday'
   return new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+function dateChipLabel(date: string) {
+  if (date === TODAY) return 'Today'
+  if (date === YESTERDAY) return 'Yesterday'
+  if (date === TOMORROW) return 'Tomorrow'
+  return new Date(date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 interface Props { initialTasks: Task[]; initialProjects: { id: string; name: string }[]; userId: string }
@@ -28,6 +36,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
   const [projSearch, setProjSearch] = useState('')
   const [estimateEdit, setEstimateEdit] = useState<EstimateEdit | null>(null)
   const [editingTitle, setEditingTitle] = useState<{ taskId: string; title: string } | null>(null)
+  const [dateEdit, setDateEdit] = useState<{ taskId: string; date: string } | null>(null)
   const [projectEdit, setProjectEdit] = useState<string | null>(null)
   const [projectEditPos, setProjectEditPos] = useState<{ top: number; left: number } | null>(null)
   const supabase = createClient()
@@ -174,6 +183,22 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
     mutateTasks()
     setEstimateEdit(null)
     toast.success('Estimate updated')
+  }
+
+  function openDateEdit(task: Task) {
+    setEstimateEdit(null)
+    setDateEdit({ taskId: task.id, date: task.task_date })
+  }
+
+  async function saveDate(taskId: string, newDate: string) {
+    if (!newDate) { setDateEdit(null); return }
+    const task = tasks.find(t => t.id === taskId)
+    if (!task || task.task_date === newDate) { setDateEdit(null); return }
+    mutateTasks(prev => (prev ?? []).map(t => t.id === taskId ? { ...t, task_date: newDate } : t), false)
+    setDateEdit(null)
+    await supabase.from('tasks').update({ task_date: newDate }).eq('id', taskId)
+    mutateTasks()
+    toast.success('Task moved')
   }
 
   const todayTasks = tasks.filter(t => t.task_date === TODAY)
@@ -336,17 +361,45 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                         </div>
                       </div>
 
-                      {/* Footer: hours + delete */}
+                      {/* Footer: hours + date + delete */}
                       <div className="flex items-center justify-between px-3 pb-2 gap-2">
-                        <button
-                          onClick={() => estimateEdit?.taskId === task.id ? setEstimateEdit(null) : openEstimateEdit(task)}
-                          className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg transition-colors ${
-                            estimateEdit?.taskId === task.id ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500 hover:bg-brand-50 hover:text-brand-700'
-                          }`}>
-                          {fmt(task.estimated_hours)}h
-                        </button>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <button
+                            onClick={() => estimateEdit?.taskId === task.id ? setEstimateEdit(null) : openEstimateEdit(task)}
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg transition-colors shrink-0 ${
+                              estimateEdit?.taskId === task.id ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500 hover:bg-brand-50 hover:text-brand-700'
+                            }`}>
+                            {fmt(task.estimated_hours)}h
+                          </button>
+                          {/* Date chip — click to move task to another day */}
+                          {dateEdit?.taskId === task.id ? (
+                            <input
+                              autoFocus
+                              type="date"
+                              value={dateEdit!.date}
+                              onChange={e => {
+                                if (e.target.value && e.target.value !== task.task_date) saveDate(task.id, e.target.value)
+                              }}
+                              onBlur={() => setDateEdit(null)}
+                              onKeyDown={e => { if (e.key === 'Escape') setDateEdit(null) }}
+                              className="text-[11px] font-medium px-1.5 py-0.5 rounded-lg border border-brand-400 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-400 w-28"
+                            />
+                          ) : (
+                            <button
+                              onClick={() => openDateEdit(task)}
+                              disabled={task.completed}
+                              title={task.completed ? 'Completed tasks are locked' : 'Move to another date'}
+                              className={`text-[11px] font-medium px-2 py-0.5 rounded-lg transition-colors truncate ${
+                                task.completed
+                                  ? 'bg-slate-50 text-slate-300 cursor-not-allowed'
+                                  : 'bg-slate-50 text-slate-500 hover:bg-brand-50 hover:text-brand-700'
+                              }`}>
+                              📅 {dateChipLabel(task.task_date)}
+                            </button>
+                          )}
+                        </div>
                         <button onClick={() => deleteTask(task.id)}
-                          className="text-slate-300 hover:text-red-500 transition-colors">
+                          className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/>
                           </svg>
