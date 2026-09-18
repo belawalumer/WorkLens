@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG } from '@/types'
+import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, isAssisting } from '@/types'
 import DeveloperCard from '@/components/DeveloperCard'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
@@ -22,7 +22,7 @@ interface Props {
   todayHoliday?: string | null
 }
 
-type FilterStatus = 'all' | 'available' | 'full' | 'underloaded' | 'overloaded'
+type FilterStatus = 'all' | 'available' | 'full' | 'underloaded' | 'overloaded' | 'assisting'
 
 const TODAY = new Date().toISOString().split('T')[0]
 
@@ -93,12 +93,13 @@ function StatCard({
   )
 }
 
-const STATUS_DISTRIBUTION: Record<WorkloadStatus, { label: string; color: string }> = {
-  overloaded:  { label: 'Overloaded',  color: '#dc2626' },
-  full:        { label: 'Occupied',   color: '#0078b7' },
-  underloaded: { label: 'Underloaded', color: '#ca8a04' },
-  available:   { label: 'Available',   color: '#25D366' },
-}
+const STATUS_DISTRIBUTION: { key: string; label: string; color: string; match: (d: DeveloperWithData) => boolean }[] = [
+  { key: 'overloaded',  label: 'Overloaded',   color: '#dc2626', match: d => d.status === 'overloaded' },
+  { key: 'full',        label: 'Occupied',     color: '#0078b7', match: d => d.status === 'full' },
+  { key: 'underloaded', label: 'Underloaded',  color: '#ca8a04', match: d => d.status === 'underloaded' },
+  { key: 'available',   label: 'Available',    color: '#25D366', match: d => d.status === 'available' },
+  { key: 'assisting',   label: 'Open to help', color: '#10b981', match: d => isAssisting(d.assist_until) },
+]
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
@@ -151,6 +152,7 @@ export default function Dashboard({
     : filter === 'available' ? activeDevs.filter(d => d.status === 'available')
     : filter === 'full' ? activeDevs.filter(d => d.status === 'full')
     : filter === 'underloaded' ? activeDevs.filter(d => d.status === 'underloaded')
+    : filter === 'assisting' ? developers.filter(d => isAssisting(d.assist_until))
     : activeDevs.filter(d => d.status === 'overloaded')
 
   const overloadedCount = activeDevs.filter(d => d.status === 'overloaded').length
@@ -254,13 +256,13 @@ export default function Dashboard({
       {developers.length > 0 && (
         <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Status Distribution</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {(Object.entries(STATUS_DISTRIBUTION) as [WorkloadStatus, { label: string; color: string }][]).map(([key, s]) => {
-              const devsInStatus = developers.filter(d => d.status === key)
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {STATUS_DISTRIBUTION.map(s => {
+              const devsInStatus = developers.filter(s.match)
               const count = devsInStatus.length
               const pct = developers.length > 0 ? (count / developers.length) * 100 : 0
               return (
-                <div key={key} className="flex items-center gap-3">
+                <div key={s.key} className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
@@ -358,7 +360,7 @@ export default function Dashboard({
       <div className="border-t border-slate-200 pt-5">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
-            {filter === 'all' ? 'All Members' : filter === 'available' ? 'Available' : filter === 'full' ? 'Occupied' : filter === 'underloaded' ? 'Underloaded' : 'Overloaded'}
+            {filter === 'all' ? 'All Members' : filter === 'available' ? 'Available' : filter === 'full' ? 'Occupied' : filter === 'underloaded' ? 'Underloaded' : filter === 'assisting' ? 'Open to help' : 'Overloaded'}
             {' '}· {filtered.length}
           </h2>
           <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden text-sm shadow-sm">
@@ -368,6 +370,7 @@ export default function Dashboard({
               { key: 'full',       label: 'Occupied' },
               { key: 'underloaded',label: 'Underloaded' },
               { key: 'overloaded', label: 'Overloaded' },
+              { key: 'assisting',  label: 'Open to help' },
             ] as { key: FilterStatus; label: string }[]).map(t => (
               <button key={t.key} onClick={() => setFilter(t.key)}
                 className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${filter === t.key ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}>

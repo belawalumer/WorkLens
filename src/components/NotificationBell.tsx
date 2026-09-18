@@ -129,7 +129,10 @@ export default function NotificationBell({ userRole, userId }: { userRole: Role;
         if (!wasActive && isActive) {
           const name = row.full_name || profileMap.current[row.id] || 'Someone'
           profileMap.current[row.id] = name
-          push({ type: 'assist_available', message: `${name} is available to provide assistance` })
+          const totalMins = Math.round((new Date(row.assist_until!).getTime() - now) / 60_000)
+          const h = Math.floor(totalMins / 60), m = totalMins % 60
+          const duration = h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+          push({ type: 'assist_available', message: `${name} is available to provide assistance for ${duration}` })
         }
       })
       .subscribe()

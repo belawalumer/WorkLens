@@ -37,7 +37,7 @@ export function isAssisting(assistUntil?: string | null, now = Date.now()): bool
   return new Date(assistUntil).getTime() > now
 }
 
-/** Remaining time in HH:MM format, e.g. "02:30" / "00:45" / "Expired". */
+/** Remaining time label, e.g. "3h 20m" / "45m" / "Expired". */
 export function formatAssistRemaining(assistUntil: string | Date, now = Date.now()): string {
   const end = typeof assistUntil === 'string' ? new Date(assistUntil).getTime() : assistUntil.getTime()
   const ms = end - now
@@ -45,7 +45,9 @@ export function formatAssistRemaining(assistUntil: string | Date, now = Date.now
   const totalMins = Math.ceil(ms / 60_000)
   const h = Math.floor(totalMins / 60)
   const m = totalMins % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  if (h <= 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
 }
 
 export function formatStatusSub(

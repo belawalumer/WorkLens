@@ -8,8 +8,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub, UNAVAILABLE_STATUSES, isAssisting, formatAssistRemaining, WorkloadStatus } from '@/types'
 import { toast } from '@/lib/toast'
 
-const ASSIST_PRESETS = [1, 2, 3, 4] as const
-
 const initials = (name: string) => {
   const p = name.trim().split(/\s+/)
   return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
@@ -46,6 +44,8 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
   const [now, setNow] = useState(() => Date.now())
   const [assistOpen, setAssistOpen] = useState(false)
   const [assistSaving, setAssistSaving] = useState(false)
+  const [assistHours, setAssistHours] = useState(1)
+  const [assistMinutes, setAssistMinutes] = useState(1)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const assistRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
@@ -59,16 +59,18 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
     return () => clearInterval(id)
   }, [localAssistUntil])
 
-  async function startAssist(hours: number) {
+  async function startAssist(minutes: number) {
+    if (!minutes) return
+    setAssistOpen(false)
     setAssistSaving(true)
-    const until = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
+    const until = new Date(Date.now() + minutes * 60 * 1000).toISOString()
     const { error } = await supabase.from('profiles').update({ assist_until: until }).eq('id', userId)
     setAssistSaving(false)
     if (error) { toast.error(error.message); return }
     setLocalAssistUntil(until)
-    setAssistOpen(false)
     mutate('profiles')
-    toast.success(`You're available for ${hours}h`)
+    const h = Math.floor(minutes / 60), m = minutes % 60
+    toast.success(`You're available for ${h > 0 ? `${h}h` : ''}${m > 0 ? ` ${m}m` : ''}`.trim())
   }
 
   async function endAssist() {
@@ -195,9 +197,9 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
               type="button"
               disabled={assistSaving}
               onClick={endAssist}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100 transition-colors disabled:opacity-50"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
               {formatAssistRemaining(localAssistUntil!, now)} · End
             </button>
           ) : canStartAssist && (
@@ -205,25 +207,38 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
               <button
                 type="button"
                 onClick={() => setAssistOpen(o => !o)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-200 hover:bg-brand-100 transition-colors"
               >
                 I&apos;m open to help
               </button>
               {assistOpen && (
-                <div className="absolute right-0 top-10 w-52 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 space-y-2">
+                <div className="absolute right-0 top-10 w-52 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 space-y-2.5">
                   <p className="text-[11px] font-semibold text-slate-500 text-center">Available for how long?</p>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {ASSIST_PRESETS.map(h => (
-                      <button key={h} type="button" disabled={assistSaving} onClick={() => startAssist(h)}
-                        className="text-xs font-semibold py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors disabled:opacity-50">
-                        {String(h).padStart(2, '0')}:00
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-1.5">
+                    <select value={assistHours} onChange={e => setAssistHours(Number(e.target.value))}
+                      className="flex-1 border border-slate-200 rounded-xl px-2 py-2 text-sm text-center text-slate-800 bg-slate-50 hover:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition-colors">
+                      {Array.from({ length: 8 }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>{String(i + 1).padStart(2, '0')}</option>
+                      ))}
+                    </select>
+                    <span className="text-slate-400 font-bold">:</span>
+                    <select value={assistMinutes} onChange={e => setAssistMinutes(Number(e.target.value))}
+                      className="flex-1 border border-slate-200 rounded-xl px-2 py-2 text-sm text-center text-slate-800 bg-slate-50 hover:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition-colors">
+                      {Array.from({ length: 60 }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>{String(i + 1).padStart(2, '0')}</option>
+                      ))}
+                    </select>
                   </div>
-                  <button type="button" onClick={() => setAssistOpen(false)}
-                    className="w-full text-[11px] text-slate-500 hover:text-slate-700 py-1">
-                    Cancel
-                  </button>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={assistSaving} onClick={() => startAssist(assistHours * 60 + assistMinutes)}
+                      className="flex-1 text-xs font-semibold py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors disabled:opacity-50">
+                      {assistSaving ? '…' : 'Set'}
+                    </button>
+                    <button type="button" onClick={() => setAssistOpen(false)}
+                      className="px-3 text-[11px] text-slate-500 hover:text-slate-700">
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -379,30 +394,43 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
           <div className="pt-2 border-t border-slate-100 mt-2 space-y-1">
             {assisting ? (
               <button type="button" disabled={assistSaving} onClick={() => { endAssist(); setMobileMenuOpen(false) }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 transition-colors disabled:opacity-50">
+                <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
                 {formatAssistRemaining(localAssistUntil!, now)} · End availability
               </button>
             ) : canStartAssist && (
               assistOpen ? (
-                <div className="px-1 space-y-2">
-                  <p className="text-[11px] font-semibold text-slate-500 text-center px-2">Available for how long?</p>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {ASSIST_PRESETS.map(h => (
-                      <button key={h} type="button" disabled={assistSaving} onClick={() => { startAssist(h); setMobileMenuOpen(false) }}
-                        className="text-xs font-semibold py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors disabled:opacity-50">
-                        {String(h).padStart(2, '0')}:00
-                      </button>
-                    ))}
+                <div className="px-1 space-y-2.5">
+                  <p className="text-[11px] font-semibold text-slate-500 text-center">Available for how long?</p>
+                  <div className="flex items-center gap-1.5">
+                    <select value={assistHours} onChange={e => setAssistHours(Number(e.target.value))}
+                      className="flex-1 border border-slate-200 rounded-xl px-2 py-2.5 text-sm text-center text-slate-800 bg-slate-50 hover:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition-colors">
+                      {Array.from({ length: 8 }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>{String(i + 1).padStart(2, '0')}</option>
+                      ))}
+                    </select>
+                    <span className="text-slate-400 font-bold">:</span>
+                    <select value={assistMinutes} onChange={e => setAssistMinutes(Number(e.target.value))}
+                      className="flex-1 border border-slate-200 rounded-xl px-2 py-2.5 text-sm text-center text-slate-800 bg-slate-50 hover:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition-colors">
+                      {Array.from({ length: 60 }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>{String(i + 1).padStart(2, '0')}</option>
+                      ))}
+                    </select>
                   </div>
-                  <button type="button" onClick={() => setAssistOpen(false)}
-                    className="w-full text-[11px] text-slate-500 hover:text-slate-700 py-1">
-                    Cancel
-                  </button>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={assistSaving} onClick={() => { startAssist(assistHours * 60 + assistMinutes); setMobileMenuOpen(false) }}
+                      className="flex-1 text-xs font-semibold py-2.5 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors disabled:opacity-50">
+                      {assistSaving ? '…' : 'Set'}
+                    </button>
+                    <button type="button" onClick={() => setAssistOpen(false)}
+                      className="px-3 text-[11px] text-slate-500 hover:text-slate-700">
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button type="button" onClick={() => setAssistOpen(true)}
-                  className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                  className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 transition-colors">
                   I&apos;m open to help
                 </button>
               )
