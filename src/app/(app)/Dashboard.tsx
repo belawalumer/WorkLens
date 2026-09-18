@@ -194,13 +194,7 @@ export default function Dashboard({
   const now = new Date()
   const dayOfWeek = now.getDay()
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-  const weekendMessages = [
-    "Hope you're enjoying the weekend with family and loved ones! 🎉",
-    "Take it easy — you've earned the rest! 🌴",
-    "Weekend mode on! Recharge for the week ahead ⚡",
-    "Hope you're having a wonderful time with your loved ones! 🏡",
-  ]
-  const weekendMsg = weekendMessages[now.getDate() % weekendMessages.length]
+  const weekendMsg = "Hope you're having a relaxing weekend with your loved ones! 🏡✨"
 
   const h = parseInt(now.toLocaleString('en-US', { timeZone: 'Asia/Karachi', hour: 'numeric', hour12: false })) % 24
   const greeting = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'
