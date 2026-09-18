@@ -89,7 +89,8 @@ export interface Task {
   title: string
   estimated_hours: number
   completed: boolean
-  task_date: string
+  /** ISO date (YYYY-MM-DD); null = backlog */
+  task_date: string | null
   estimate_change_reason: string | null
   project?: Project
 }

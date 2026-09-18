@@ -32,15 +32,16 @@
 - Developer cards showing name, role, workload status badge, planned hours, free hours, task count, workload bar, and task list with project tags
 
 ### My Tasks — Kanban Board
-- **This-week filter** — board shows only the current week (Mon–Sun); older tasks are hidden
+- **This-week filter** — dated columns show only the current week (Mon–Sun); older dated tasks are hidden
+- **Backlog column** — always pinned first (left of Today) for undated tasks; not hidden by the week filter
 - Date-grouped columns with Today highlighted in brand blue; columns are independently scrollable on large screens
 - **Stat cards** below the header: Planned hours · Done hours · Free hours remaining for today
 - Column headers show task count, done/total hours, and a progress bar
-- **Add Task modal** with title, hours, date, and a custom project dropdown with live search
+- **Add Task modal** with title, hours, date, a **Save to backlog** checkbox (date optional when checked), and a custom project dropdown with live search
 - Inline title editing — click any task title to edit
 - Clickable project badge on each card to change the project instantly
 - Hours badge opens an estimate edit panel (requires a reason when changing hours)
-- Inline date chip on each card to move the task to any other day (locked once the task is completed)
+- Inline date chip on each card to move the task to another day or **Backlog** (locked once the task is completed)
 - Task completion toggle
 - Realtime sync via Supabase Postgres changes subscription
 
@@ -113,6 +114,7 @@ Run in order via the Supabase SQL editor (`supabase/migrations/`):
 | `008_leave_unique.sql` | Leave records schema fixes (rename date column, unique constraint) |
 | `009_assist_until.sql` | Add `assist_until` timestamptz to profiles for the available-to-assist signal |
 | `010_add_sqa_ui_ux_roles.sql` | Expand role check constraint to include `sqa` and `ui_ux`; update 3 RLS policies |
+| `011_task_date_nullable.sql` | Make `tasks.task_date` nullable (`null` = backlog) |
 
 ---
 

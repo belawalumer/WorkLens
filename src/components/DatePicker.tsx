@@ -11,6 +11,9 @@ interface Props {
   placeholder?: string
   /** Render as a compact chip (for inline task date edits) */
   compact?: boolean
+  /** Show a Backlog shortcut (My Tasks date chip only) */
+  allowBacklog?: boolean
+  onBacklog?: () => void
 }
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -26,7 +29,7 @@ function fmtDisplay(iso: string, placeholder = 'Select date') {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export default function DatePicker({ value, onChange, min, className, placeholder, compact }: Props) {
+export default function DatePicker({ value, onChange, min, className, placeholder, compact, allowBacklog, onBacklog }: Props) {
   const [open, setOpen]         = useState(false)
   const [viewYear, setViewYear] = useState(() => value ? parseInt(value.slice(0,4)) : new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(() => value ? parseInt(value.slice(5,7)) - 1 : new Date().getMonth())
@@ -137,13 +140,19 @@ export default function DatePicker({ value, onChange, min, className, placeholde
         })}
       </div>
 
-      {/* Today shortcut */}
-      <div className="mt-2 pt-2 border-t border-slate-100">
+      {/* Today / Backlog shortcuts */}
+      <div className={`mt-2 pt-2 border-t border-slate-100 ${allowBacklog ? 'flex gap-2' : ''}`}>
         <button type="button" onClick={() => { if (!min || TODAY >= min) { onChange(TODAY); setOpen(false) } }}
           disabled={!!(min && TODAY < min)}
-          className="w-full text-center text-xs font-semibold text-brand-600 hover:text-brand-800 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors py-0.5">
+          className={`${allowBacklog ? 'flex-1' : 'w-full'} text-center text-xs font-semibold text-brand-600 hover:text-brand-800 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors py-0.5`}>
           Today
         </button>
+        {allowBacklog && (
+          <button type="button" onClick={() => { onBacklog?.(); setOpen(false) }}
+            className="flex-1 text-center text-xs font-semibold text-slate-600 hover:text-slate-800 transition-colors py-0.5">
+            Backlog
+          </button>
+        )}
       </div>
     </div>,
     document.body,

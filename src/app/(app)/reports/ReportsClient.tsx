@@ -52,7 +52,7 @@ function getMonthlyHistory(tasks: Task[], devId: string, holidayDates: string[],
     const start = d.toISOString().split('T')[0]
     const end = new Date(year, month + 1, 0).toISOString().split('T')[0]
     const isFuture = start > todayStr
-    const mt = tasks.filter(t => t.developer_id === devId && t.task_date >= start && t.task_date <= end)
+    const mt = tasks.filter(t => t.developer_id === devId && t.task_date && t.task_date >= start && t.task_date <= end)
     const hours = mt.reduce((s, t) => s + t.estimated_hours, 0)
     const done = mt.filter(t => t.completed).length
     const devLeaves = leaveRecords.filter(l => {
@@ -102,7 +102,7 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
   )
 
   function stats(devId: string, s: string, e: string) {
-    const dt = tasks.filter(t => t.developer_id === devId && t.task_date >= s && t.task_date <= e)
+    const dt = tasks.filter(t => t.developer_id === devId && t.task_date && t.task_date >= s && t.task_date <= e)
     const hours = dt.reduce((acc, t) => acc + t.estimated_hours, 0)
     const done = dt.filter(t => t.completed)
     return {
@@ -166,7 +166,7 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
 
           const periodTasks = isExpanded
             ? tasks
-                .filter(t => t.developer_id === dev.id && t.task_date >= start && t.task_date <= end)
+                .filter(t => t.developer_id === dev.id && t.task_date && t.task_date >= start && t.task_date <= end)
                 .filter(t => taskFilter === 'all' ? true : taskFilter === 'done' ? t.completed : !t.completed)
             : []
 
@@ -300,11 +300,11 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
                                 <p className={`text-xs truncate ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`} title={task.title}>
                                   {task.title}
                                 </p>
-                                <p className="text-[10px] text-slate-500 sm:hidden">{task.project?.name ?? '—'} · {new Date(task.task_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                                <p className="text-[10px] text-slate-500 sm:hidden">{task.project?.name ?? '—'} · {task.task_date ? new Date(task.task_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</p>
                               </div>
                               <p className="hidden sm:block text-xs text-slate-500 truncate">{task.project?.name ?? '—'}</p>
                               <p className="hidden sm:block text-xs text-slate-500 text-right">
-                                {new Date(task.task_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                {task.task_date ? new Date(task.task_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                               </p>
                               <p className="text-xs font-semibold text-slate-700 text-right tabular-nums">{fmt(task.estimated_hours)}h</p>
                             </div>
