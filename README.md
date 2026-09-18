@@ -32,7 +32,9 @@
 - Developer cards showing name, role, workload status badge, planned hours, free hours, task count, workload bar, and task list with project tags
 
 ### My Tasks — Kanban Board
-- Date-grouped columns with Today highlighted in brand blue
+- **This-week filter** — board shows only the current week (Mon–Sun); older tasks are hidden
+- Date-grouped columns with Today highlighted in brand blue; columns are independently scrollable on large screens
+- **Stat cards** below the header: Planned hours · Done hours · Free hours remaining for today
 - Column headers show task count, done/total hours, and a progress bar
 - **Add Task modal** with title, hours, date, and a custom project dropdown with live search
 - Inline title editing — click any task title to edit
@@ -41,7 +43,6 @@
 - Inline date chip on each card to move the task to any other day (locked once the task is completed)
 - Task completion toggle
 - Realtime sync via Supabase Postgres changes subscription
-- Today's summary bar: planned · done · free hours
 
 ### Projects
 - All roles can add and rename projects
@@ -50,11 +51,12 @@
 - Project name shown as a badge on task cards and in the dashboard task list
 
 ### Reports
+- **Period tabs** — Today / This Week / This Month; clicking a tab filters the task list and stat cards below in real time
 - Expandable per-developer rows with:
-  - Quick stats: Today · This Week · This Month
+  - Quick stats: Planned · Done · Free for the selected period
   - 6-month history cards — green if target met, red if missed, neutral for future/empty months
   - Monthly target = working days × 8h − leave hours taken
-  - Task list for the current month with project, date, and hours columns
+  - Task list filtered by the selected period with project, date, and hours columns
   - Task filter: All · Done · Pending
 - **Role-based access**: developers see only their own report; HR Admin sees all except Super Admin; Super Admin sees everyone
 - Search bar hidden for developer view (single-row)
@@ -65,14 +67,22 @@
 
 ### Team Management
 - Full team roster with role badges and live workload status
-- Super Admin and HR Admin can promote/change roles
-- Actions column hidden from developer view
+- Super Admin can assign any role including SQA and UI/UX; HR Admin can assign developer-tier roles
+- Role summary cards show combined developer-tier headcount (Developer + SQA + UI/UX)
+- Actions column hidden from developer-tier users
 
 ### User Status
 - Status picker in the navbar dropdown: Active · Away · Do Not Disturb · In a Meeting · On Leave · Vacation
 - Date range picker for Vacation and On Leave statuses
 - **On Leave auto-sync** — setting On Leave automatically inserts leave records for every weekday in the range; reverting removes future records while preserving past ones
 - Flat CSS status dot on every avatar (reliable at all sizes, no emoji rendering issues)
+
+### Available-to-Assist Signal
+- Any developer can signal they are open to help from the navbar — sets a timed window (up to 8 h)
+- Hours and minutes chosen from branded dropdowns; no native OS time picker
+- Active assist shown as a pulsing green "Open to help · Xh Ym" chip on the developer's card, visible to the whole team
+- Clicking the chip opens a two-step popup: **Update time** (adjusts the window) or **End availability** (clears it immediately)
+- Timer counts down live and expires automatically
 
 ### Notifications
 - In-app notification bell in the navbar with role-aware feed
@@ -86,6 +96,8 @@
 | `super_admin` | Full access — all reports, settings, team management, delete projects |
 | `hr_admin` | Settings, team management, reports (excluding super admins), delete projects |
 | `developer` | My Tasks, own report, team view (read-only), projects (no delete) |
+| `sqa` | Same access as `developer` |
+| `ui_ux` | Same access as `developer` |
 
 ---
 
@@ -98,6 +110,9 @@ Run in order via the Supabase SQL editor (`supabase/migrations/`):
 | `001_initial_schema.sql` | Core tables: profiles, projects, developer_roles, tasks; RLS policies |
 | `002` – `006_features.sql` | Notifications, leave records, public holidays, status sync, idempotency fixes |
 | `007_projects.sql` | Unique index on project names; delete RLS policy for admins |
+| `008_leave_unique.sql` | Leave records schema fixes (rename date column, unique constraint) |
+| `009_assist_until.sql` | Add `assist_until` timestamptz to profiles for the available-to-assist signal |
+| `010_add_sqa_ui_ux_roles.sql` | Expand role check constraint to include `sqa` and `ui_ux`; update 3 RLS policies |
 
 ---
 
