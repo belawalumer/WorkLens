@@ -108,6 +108,12 @@ export default function Dashboard({
   const [filter, setFilter] = useState<FilterStatus>('all')
   const supabase = createClient()
 
+  const { data: todayLeaves = [] } = useSWR<{ developer_id: string; leave_type: string }[]>(
+    'today-leaves',
+    async () => (await supabase.from('leave_records').select('developer_id, leave_type').eq('leave_date', TODAY)).data ?? [],
+    { revalidateOnFocus: true },
+  )
+
   const { data: tasks = initTasks } = useSWR(
     'dashboard-tasks',
     async () => (await supabase.from('tasks').select('*, project:projects(id, name)').eq('task_date', TODAY)).data ?? [],
@@ -296,21 +302,32 @@ export default function Dashboard({
             🏠 On Leave Today · {onLeaveToday.length}
           </h2>
           <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
-            {onLeaveToday.map(dev => (
-              <div key={dev.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                  <span className="text-slate-500 font-bold text-xs">{initials(dev.full_name)}</span>
+            {onLeaveToday.map(dev => {
+              const leaveRecord = todayLeaves.find(l => l.developer_id === dev.id)
+              const dayLabel = leaveRecord?.leave_type === 'full' ? 'Full day' : leaveRecord ? 'Half day' : null
+              return (
+                <div key={dev.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                    <span className="text-slate-500 font-bold text-xs">{initials(dev.full_name)}</span>
+                  </div>
+                  <p className="text-sm font-medium text-slate-700 flex-1 min-w-0 truncate">{dev.full_name}</p>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {dayLabel && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                        {dayLabel}
+                      </span>
+                    )}
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                      dev.user_status === 'vacation'
+                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                        : 'bg-slate-100 text-slate-600 border-slate-200'
+                    }`}>
+                      {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-sm font-medium text-slate-700 flex-1 min-w-0 truncate">{dev.full_name}</p>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                  dev.user_status === 'vacation'
-                    ? 'bg-purple-50 text-purple-700 border-purple-200'
-                    : 'bg-slate-100 text-slate-600 border-slate-200'
-                }`}>
-                  {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

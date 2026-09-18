@@ -29,11 +29,9 @@ interface Props { initialTasks: Task[]; initialProjects: { id: string; name: str
 interface EstimateEdit { taskId: string; originalHours: number; hours: string; reason: string; reasonError: boolean }
 
 export default function MyTasks({ initialTasks, initialProjects, userId }: Props) {
-  const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ title: '', estimated_hours: '1', task_date: TODAY, project_id: '' })
-  const [saving, setSaving] = useState(false)
-  const [projOpen, setProjOpen] = useState(false)
-  const [projSearch, setProjSearch] = useState('')
+  const [quickAddDate, setQuickAddDate] = useState<string | null>(null)
+  const [quickAddTitle, setQuickAddTitle] = useState('')
+  const [quickAddSaving, setQuickAddSaving] = useState(false)
   const [estimateEdit, setEstimateEdit] = useState<EstimateEdit | null>(null)
   const [editingTitle, setEditingTitle] = useState<{ taskId: string; title: string } | null>(null)
   const [dateEdit, setDateEdit] = useState<{ taskId: string; date: string } | null>(null)
@@ -74,46 +72,29 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
     return () => { supabase.removeChannel(channel) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function openModal(date?: string) {
-    setForm(f => ({ ...f, task_date: date ?? TODAY, title: '', project_id: '' }))
-    setProjOpen(false)
-    setProjSearch('')
-    setShowModal(true)
+  function openQuickAdd(date: string) {
+    setQuickAddDate(date)
+    setQuickAddTitle('')
   }
 
-  function closeModal() {
-    setShowModal(false)
-    setProjOpen(false)
-    setProjSearch('')
-  }
-
-  async function addTask(e: React.FormEvent) {
-    e.preventDefault()
-    if (!form.title.trim()) return
-    setSaving(true)
-    const projectId = form.project_id || null
-    const proj = projects.find(p => p.id === projectId) ?? null
+  async function submitQuickAdd(date: string) {
+    const title = quickAddTitle.trim()
+    if (!title) { setQuickAddDate(null); return }
+    setQuickAddSaving(true)
     const tempTask: Task = {
       id: crypto.randomUUID(),
       developer_id: userId,
-      project_id: projectId,
-      project: proj ?? undefined,
-      title: form.title.trim(),
-      estimated_hours: parseFloat(form.estimated_hours) || 1,
+      project_id: null,
+      title,
+      estimated_hours: 1,
       completed: false,
-      task_date: form.task_date,
+      task_date: date,
       estimate_change_reason: null,
     }
     mutateTasks(prev => [tempTask, ...(prev ?? [])], false)
-    closeModal()
-    setSaving(false)
-    await supabase.from('tasks').insert({
-      developer_id: userId,
-      title: tempTask.title,
-      estimated_hours: tempTask.estimated_hours,
-      task_date: tempTask.task_date,
-      project_id: projectId,
-    })
+    setQuickAddDate(null)
+    setQuickAddSaving(false)
+    await supabase.from('tasks').insert({ developer_id: userId, title, estimated_hours: 1, task_date: date })
     mutateTasks()
     toast.success('Task added')
   }
@@ -212,8 +193,6 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
     return Array.from(dateSet).sort((a, b) => b.localeCompare(a))
   }, [tasks])
 
-  const selectedProjName = projects.find(p => p.id === form.project_id)?.name
-
   return (
     <div className="page-enter flex flex-col h-full">
       {/* Project edit dropdown — rendered fixed to escape kanban overflow-x-auto clipping */}
@@ -242,25 +221,50 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
       })()}
 
       {/* ── Header ───────────────────────────────────────────────── */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">My Tasks</h1>
-          <div className="flex items-center gap-2 mt-1.5">
-            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
-              📅 {fmt(totalToday)}h planned
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">
-              ✅ {fmt(doneToday)}h done
-            </span>
-            <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${freeToday > 2 ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>
-              🕐 {fmt(freeToday)}h free
-            </span>
+      <div className="mb-5 bg-gradient-to-br from-brand-600 to-brand-800 rounded-2xl px-5 pt-5 pb-4 shadow-lg shadow-brand-900/20">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-brand-200 text-[11px] font-semibold uppercase tracking-widest mb-1">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            <h1 className="text-2xl font-bold text-white leading-tight">My Tasks</h1>
+          </div>
+          <button onClick={() => openQuickAdd(TODAY)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-white text-brand-700 text-sm font-semibold rounded-xl hover:bg-brand-50 transition-colors shadow-sm shrink-0 mt-0.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add task
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="bg-white/20 border border-white/10 rounded-xl px-3 py-2.5">
+            <p className="text-brand-100 text-[10px] font-semibold uppercase tracking-wide mb-0.5">Planned</p>
+            <p className="text-white text-xl font-bold leading-none">{fmt(totalToday)}<span className="text-brand-100 text-xs font-normal ml-0.5">h</span></p>
+          </div>
+          <div className="bg-emerald-400/30 border border-emerald-300/20 rounded-xl px-3 py-2.5">
+            <p className="text-emerald-100 text-[10px] font-semibold uppercase tracking-wide mb-0.5">Done</p>
+            <p className="text-white text-xl font-bold leading-none">{fmt(doneToday)}<span className="text-emerald-100 text-xs font-normal ml-0.5">h</span></p>
+          </div>
+          <div className={`rounded-xl px-3 py-2.5 border ${freeToday <= 1 ? 'bg-orange-400/40 border-orange-300/20' : 'bg-amber-300/25 border-amber-200/20'}`}>
+            <p className="text-amber-100 text-[10px] font-semibold uppercase tracking-wide mb-0.5">Free</p>
+            <p className="text-white text-xl font-bold leading-none">{fmt(freeToday)}<span className="text-amber-100 text-xs font-normal ml-0.5">h</span></p>
           </div>
         </div>
-        <button onClick={() => openModal()}
-          className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm shadow-brand-200">
-          + Add task
-        </button>
+
+        {totalToday > 0 && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-brand-200 text-[10px] font-medium">Today&apos;s progress</p>
+              <p className="text-brand-200 text-[10px] font-semibold">{Math.round((doneToday / totalToday) * 100)}%</p>
+            </div>
+            <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-white rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, (doneToday / totalToday) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Board ─────────────────────────────────────────────────── */}
@@ -303,15 +307,16 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
 
               {/* Task cards */}
               <div className={`flex flex-col gap-2 p-2 rounded-b-2xl border border-t-0 min-h-32 ${isToday ? 'bg-brand-50/40 border-brand-200' : 'bg-slate-50 border-slate-200'}`}>
-                {dayTasks.length === 0 ? (
+                {dayTasks.length === 0 && quickAddDate !== date && (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <p className="text-slate-400 text-xs">No tasks yet</p>
-                    <button onClick={() => openModal(date)}
+                    <button onClick={() => openQuickAdd(date)}
                       className="mt-1.5 text-brand-600 text-xs font-semibold hover:text-brand-800">
                       + Add one
                     </button>
                   </div>
-                ) : (
+                )}
+                {dayTasks.length > 0 && (
                   dayTasks.map(task => (
                     <div key={task.id} className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow transition-shadow">
                       <div className="flex items-start gap-2.5 px-3 py-2.5">
@@ -427,152 +432,39 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                     </div>
                   ))
                 )}
+
+                {/* Inline quick-add form */}
+                {quickAddDate === date ? (
+                  <form onSubmit={e => { e.preventDefault(); submitQuickAdd(date) }}
+                    className="flex items-center gap-1.5 pt-1">
+                    <input
+                      autoFocus
+                      value={quickAddTitle}
+                      onChange={e => setQuickAddTitle(e.target.value)}
+                      onKeyDown={e => e.key === 'Escape' && setQuickAddDate(null)}
+                      placeholder="Task title…"
+                      className="flex-1 text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-brand-400"
+                    />
+                    <button type="submit" disabled={quickAddSaving || !quickAddTitle.trim()}
+                      className="px-2.5 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-lg disabled:opacity-50 hover:bg-brand-700 transition-colors">
+                      Add
+                    </button>
+                    <button type="button" onClick={() => setQuickAddDate(null)}
+                      className="px-2 py-1.5 border border-slate-200 text-slate-400 text-xs rounded-lg hover:bg-slate-50 transition-colors">
+                      ✕
+                    </button>
+                  </form>
+                ) : (
+                  <button onClick={() => openQuickAdd(date)}
+                    className="w-full text-left px-2 py-1.5 text-xs text-slate-400 hover:text-brand-600 hover:bg-white/60 rounded-lg transition-colors">
+                    + Add task
+                  </button>
+                )}
               </div>
             </div>
           )
         })}
       </div>
-
-      {/* ── Add Task Modal ────────────────────────────────────────── */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4" onClick={closeModal}>
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-          <form
-            onSubmit={addTask}
-            onClick={e => e.stopPropagation()}
-            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md"
-          >
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-base font-bold text-slate-900">Add Task</h2>
-              <button type="button" onClick={closeModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal body */}
-            <div className="px-6 py-5 space-y-4">
-              {/* Title */}
-              <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Task</label>
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="What needs to be done?"
-                  value={form.title}
-                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50 transition-colors"
-                />
-              </div>
-
-              {/* Hours + Date */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Hours</label>
-                  <div className="flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus-within:ring-2 focus-within:ring-brand-400 transition-colors">
-                    <input
-                      type="number" min="0.05" max="24" step="0.05"
-                      value={form.estimated_hours}
-                      onChange={e => setForm(f => ({ ...f, estimated_hours: e.target.value }))}
-                      className="w-full text-sm focus:outline-none bg-transparent"
-                    />
-                    <span className="text-xs text-slate-400 shrink-0">h</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Date</label>
-                  <input
-                    type="date"
-                    value={form.task_date}
-                    onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 transition-colors"
-                  />
-                </div>
-              </div>
-
-              {/* Project — custom dropdown */}
-              {projects.length > 0 && (
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Project</label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => { setProjOpen(o => !o); setProjSearch('') }}
-                      className="w-full flex items-center justify-between px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm hover:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition-colors"
-                    >
-                      <span className={selectedProjName ? 'text-slate-800 font-medium' : 'text-slate-400'}>
-                        {selectedProjName ?? 'No project'}
-                      </span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                        className={`text-slate-400 transition-transform ${projOpen ? 'rotate-180' : ''}`}>
-                        <polyline points="6 9 12 15 18 9"/>
-                      </svg>
-                    </button>
-
-                    {projOpen && (
-                      <>
-                        <div className="fixed inset-0 z-0" onClick={() => setProjOpen(false)} />
-                        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-10 overflow-hidden">
-                          <div className="p-2 border-b border-slate-100">
-                            <input
-                              type="text"
-                              placeholder="Search projects…"
-                              value={projSearch}
-                              onChange={e => setProjSearch(e.target.value)}
-                              autoFocus
-                              className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50"
-                            />
-                          </div>
-                          <div className="max-h-44 overflow-y-auto">
-                            <button type="button"
-                              onClick={() => { setForm(f => ({ ...f, project_id: '' })); setProjOpen(false) }}
-                              className={`w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-slate-50 flex items-center gap-2 ${!form.project_id ? 'text-brand-600 font-semibold bg-brand-50/50' : 'text-slate-500'}`}>
-                              <span className="w-4 h-4 rounded-full border-2 border-slate-200 shrink-0 flex items-center justify-center">
-                                {!form.project_id && <span className="w-2 h-2 rounded-full bg-brand-500 block" />}
-                              </span>
-                              No project
-                            </button>
-                            {projects
-                              .filter(p => !projSearch || p.name.toLowerCase().includes(projSearch.toLowerCase()))
-                              .map(p => (
-                                <button type="button" key={p.id}
-                                  onClick={() => { setForm(f => ({ ...f, project_id: p.id })); setProjOpen(false) }}
-                                  className={`w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-slate-50 flex items-center gap-2 ${form.project_id === p.id ? 'text-brand-600 font-semibold bg-brand-50/50' : 'text-slate-700'}`}>
-                                  <span className="w-4 h-4 rounded-full border-2 border-slate-200 shrink-0 flex items-center justify-center">
-                                    {form.project_id === p.id && <span className="w-2 h-2 rounded-full bg-brand-500 block" />}
-                                  </span>
-                                  {p.name}
-                                </button>
-                              ))
-                            }
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal footer */}
-            <div className="flex gap-2 px-6 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl overflow-hidden">
-              <button
-                type="submit"
-                disabled={saving || !form.title.trim()}
-                className="flex-1 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-50 transition-colors">
-                {saving ? 'Saving…' : 'Add task'}
-              </button>
-              <button type="button" onClick={closeModal}
-                className="px-5 py-2.5 border border-slate-200 text-sm rounded-xl hover:bg-white text-slate-600 transition-colors font-medium">
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   )
 }

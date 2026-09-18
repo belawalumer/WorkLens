@@ -37,8 +37,8 @@ export function formatStatusSub(
 ): string | null {
   const fmt = (d: string) =>
     new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  if (status === 'vacation' && from && until) return `${fmt(from)} – ${fmt(until)}`
-  if (status === 'on_leave' && from) return until ? `${fmt(from)} – ${fmt(until)}` : `from ${fmt(from)}`
+  if (status === 'vacation' && from && until) return from === until ? fmt(from) : `${fmt(from)} – ${fmt(until)}`
+  if (status === 'on_leave' && from) return (!until || from === until) ? fmt(from) : `${fmt(from)} – ${fmt(until)}`
   if (status === 'in_meeting' && from) return fmt(from)
   return null
 }
