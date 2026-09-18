@@ -187,6 +187,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
             {navLink('/team', 'Team')}
             {navLink('/projects', 'Projects')}
             {navLink('/reports', 'Reports')}
+            {navLink('/map', 'Map')}
             {(userRole === 'super_admin' || userRole === 'hr_admin') && navLink('/settings', 'Settings')}
           </nav>
         </div>
@@ -409,6 +410,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
             ['/team', 'Team'],
             ['/projects', 'Projects'],
             ['/reports', 'Reports'],
+            ['/map', 'Map'],
             ...(userRole === 'super_admin' || userRole === 'hr_admin' ? [['/settings', 'Settings']] : []),
           ] as [string, string][]).map(([href, label]) => {
             const active = pathname === href
