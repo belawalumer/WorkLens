@@ -17,6 +17,16 @@ export const USER_STATUS_CONFIG: Record<UserStatus, { label: string; emoji: stri
 
 export const UNAVAILABLE_STATUSES: UserStatus[] = ['on_leave', 'vacation']
 
+/** Returns 'active' if a leave/vacation status has passed its end date — no DB write needed. */
+export function effectiveStatus(
+  status: UserStatus,
+  statusUntil?: string | null,
+  today = new Date().toISOString().split('T')[0],
+): UserStatus {
+  if ((status === 'on_leave' || status === 'vacation') && statusUntil && statusUntil < today) return 'active'
+  return status
+}
+
 export const ROLE_LABELS: Record<Role, string> = {
   super_admin: 'Super Admin',
   hr_admin: 'HR Admin',

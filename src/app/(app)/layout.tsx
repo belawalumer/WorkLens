@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Navbar from '@/components/Navbar'
 import RealtimeProvider from '@/components/RealtimeProvider'
-import { Role, UserStatus, WorkloadStatus, getWorkloadStatus } from '@/types'
+import { Role, UserStatus, WorkloadStatus, getWorkloadStatus, effectiveStatus } from '@/types'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -18,15 +18,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const todayHours = todayTasks?.reduce((s, t) => s + t.estimated_hours, 0) ?? 0
   const workloadStatus: WorkloadStatus = getWorkloadStatus(todayHours)
 
+  const rawStatus = (profile?.user_status as UserStatus) ?? 'active'
+  const resolvedStatus = effectiveStatus(rawStatus, profile?.status_until, today)
+
+  // Option A: silently clear expired leave/vacation in DB (fire-and-forget)
+  if (resolvedStatus !== rawStatus) {
+    supabase.from('profiles')
+      .update({ user_status: 'active', status_from: null, status_until: null })
+      .eq('id', user.id)
+      .then(() => {})
+  }
+
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
       <Navbar
         userName={profile?.full_name ?? user.email ?? ''}
         userRole={(profile?.role as Role) ?? 'developer'}
         userId={user.id}
-        userStatus={(profile?.user_status as UserStatus) ?? 'active'}
-        statusFrom={profile?.status_from ?? null}
-        statusUntil={profile?.status_until ?? null}
+        userStatus={resolvedStatus}
+        statusFrom={resolvedStatus !== rawStatus ? null : (profile?.status_from ?? null)}
+        statusUntil={resolvedStatus !== rawStatus ? null : (profile?.status_until ?? null)}
         assistUntil={profile?.assist_until ?? null}
         workloadStatus={workloadStatus}
       />

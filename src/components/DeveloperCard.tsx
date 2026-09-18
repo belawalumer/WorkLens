@@ -12,6 +12,7 @@ import {
   formatStatusSub,
   isAssisting,
   formatAssistRemaining,
+  effectiveStatus,
 } from '@/types'
 import Link from 'next/link'
 
@@ -55,7 +56,8 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
 
   const primaryRole   = dev.roles[0]
   const showRoleBadge = true
-  const isUnavailable = UNAVAILABLE_STATUSES.includes((dev.user_status ?? 'active') as UserStatus)
+  const userStatus    = effectiveStatus((dev.user_status ?? 'active') as UserStatus, dev.status_until)
+  const isUnavailable = UNAVAILABLE_STATUSES.includes(userStatus)
   const freeToday     = Math.max(0, dev.freeHours)
   const fillPct       = Math.min(100, (dev.todayHours / 8) * 100)
   const assisting     = isAssisting(dev.assist_until, now)
@@ -99,11 +101,11 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
           }`}>
             {initials(dev.full_name)}
           </div>
-          <span className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full ring-2 ring-white shadow-sm ${USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].dotBg}`} />
+          <span className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full ring-2 ring-white shadow-sm ${USER_STATUS_CONFIG[userStatus].dotBg}`} />
           <div className="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/status:opacity-100 transition-opacity z-20">
-            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
+            {USER_STATUS_CONFIG[userStatus].label}
             {(() => {
-              const sub = formatStatusSub((dev.user_status ?? 'active') as UserStatus, dev.status_from, dev.status_until)
+              const sub = formatStatusSub(userStatus, dev.status_from, dev.status_until)
               return sub ? ` · ${sub}` : ''
             })()}
           </div>
@@ -155,10 +157,10 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
       ) : (
         <div className="px-4 py-3 border-t border-slate-100">
           <p className="flex items-center gap-1.5 text-xs text-slate-500">
-            <span className={`w-2 h-2 rounded-full shrink-0 ${USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].dotBg}`} />
-            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
+            <span className={`w-2 h-2 rounded-full shrink-0 ${USER_STATUS_CONFIG[userStatus].dotBg}`} />
+            {USER_STATUS_CONFIG[userStatus].label}
             {(() => {
-              const sub = formatStatusSub(dev.user_status as UserStatus, dev.status_from, dev.status_until)
+              const sub = formatStatusSub(userStatus, dev.status_from, dev.status_until)
               return sub ? ` · ${sub}` : ''
             })()}
           </p>

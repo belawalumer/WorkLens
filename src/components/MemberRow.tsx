@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import {
   DeveloperWithData, Role, ROLE_LABELS,
-  UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, formatStatusSub,
+  UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, formatStatusSub, effectiveStatus,
 } from '@/types'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
@@ -35,7 +35,8 @@ interface Props {
 
 export default function MemberRow({ dev, isMe, viewerRole }: Props) {
   const primaryRole    = dev.roles[0]
-  const isUnavailable  = UNAVAILABLE_STATUSES.includes((dev.user_status ?? 'active') as UserStatus)
+  const userStatus     = effectiveStatus((dev.user_status ?? 'active') as UserStatus, dev.status_until)
+  const isUnavailable  = UNAVAILABLE_STATUSES.includes(userStatus)
   const freeToday      = Math.max(0, dev.freeHours)
   const fillPct        = Math.min(100, (dev.todayHours / 8) * 100)
   const showRoleBadge  = true
@@ -55,12 +56,12 @@ export default function MemberRow({ dev, isMe, viewerRole }: Props) {
             {initials(dev.full_name)}
           </div>
           <span className="absolute -bottom-1 -right-1 flex items-center justify-center w-4 h-4 bg-white rounded-full text-[9px] leading-none shadow-sm ring-1 ring-slate-100">
-            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].emoji}
+            {USER_STATUS_CONFIG[userStatus].emoji}
           </span>
           <div className="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-[11px] font-medium bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover/status:opacity-100 transition-opacity z-20">
-            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
+            {USER_STATUS_CONFIG[userStatus].label}
             {(() => {
-              const sub = formatStatusSub((dev.user_status ?? 'active') as UserStatus, dev.status_from, dev.status_until)
+              const sub = formatStatusSub(userStatus, dev.status_from, dev.status_until)
               return sub ? ` · ${sub}` : ''
             })()}
           </div>
@@ -83,10 +84,10 @@ export default function MemberRow({ dev, isMe, viewerRole }: Props) {
         <div className="flex-1 hidden sm:block">
           {isUnavailable ? (
             <p className="text-xs text-slate-400">
-              {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].emoji}{' '}
-              {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
+              {USER_STATUS_CONFIG[userStatus].emoji}{' '}
+              {USER_STATUS_CONFIG[userStatus].label}
               {(() => {
-                const sub = formatStatusSub(dev.user_status as UserStatus, dev.status_from, dev.status_until)
+                const sub = formatStatusSub(userStatus, dev.status_from, dev.status_until)
                 return sub ? ` · ${sub}` : ''
               })()}
             </p>
