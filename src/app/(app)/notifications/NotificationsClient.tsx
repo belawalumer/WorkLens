@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import DatePicker from '@/components/DatePicker'
 
 interface RawNotif {
   id: string
@@ -91,8 +92,7 @@ export default function NotificationsClient({ notifications }: { notifications: 
           ))}
         </div>
         {filter === 'custom' && (
-          <input type="date" value={customDate} onChange={e => setCustomDate(e.target.value)}
-            className="px-3 py-1.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm" />
+          <DatePicker value={customDate} onChange={setCustomDate} />
         )}
       </div>
 

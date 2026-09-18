@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Task } from '@/types'
 import { toast } from '@/lib/toast'
+import DatePicker from '@/components/DatePicker'
 
 const TODAY = new Date().toISOString().split('T')[0]
 const YESTERDAY = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()
@@ -390,17 +391,8 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                           </button>
                           {/* Date chip — click to move task to another day */}
                           {dateEdit?.taskId === task.id ? (
-                            <input
-                              autoFocus
-                              type="date"
-                              value={dateEdit!.date}
-                              onChange={e => {
-                                if (e.target.value && e.target.value !== task.task_date) saveDate(task.id, e.target.value)
-                              }}
-                              onBlur={() => setDateEdit(null)}
-                              onKeyDown={e => { if (e.key === 'Escape') setDateEdit(null) }}
-                              className="text-[11px] font-medium px-1.5 py-0.5 rounded-lg border border-brand-400 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-400 w-28"
-                            />
+                            <DatePicker compact value={dateEdit!.date}
+                              onChange={v => { if (v !== task.task_date) saveDate(task.id, v); else setDateEdit(null) }} />
                           ) : (
                             <button
                               onClick={() => openDateEdit(task)}
@@ -488,8 +480,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Date</label>
-                  <input type="date" value={form.task_date} onChange={e => setForm(f => ({ ...f, task_date: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 transition-colors" />
+                  <DatePicker value={form.task_date} onChange={v => setForm(f => ({ ...f, task_date: v }))} />
                 </div>
               </div>
               {projects.length > 0 && (

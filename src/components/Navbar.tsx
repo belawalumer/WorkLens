@@ -13,6 +13,7 @@ const initials = (name: string) => {
   return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase()
 }
 import NotificationBell from './NotificationBell'
+import DatePicker from './DatePicker'
 
 interface Props {
   userName: string
@@ -207,16 +208,17 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
                     </p>
                     <div>
                       <label className="text-[10px] text-slate-500 font-medium">Start date</label>
-                      <input type="date" value={pendingFrom} onChange={e => setPendingFrom(e.target.value)}
-                        className="mt-1 w-full px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                      <div className="mt-1">
+                        <DatePicker value={pendingFrom} onChange={setPendingFrom} />
+                      </div>
                     </div>
                     <div>
                       <label className="text-[10px] text-slate-500 font-medium">
                         End date{pendingStatus === 'on_leave' ? ' (optional)' : ''}
                       </label>
-                      <input type="date" value={pendingUntil} onChange={e => setPendingUntil(e.target.value)}
-                        min={pendingFrom}
-                        className="mt-1 w-full px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                      <div className="mt-1">
+                        <DatePicker value={pendingUntil} onChange={setPendingUntil} min={pendingFrom} />
+                      </div>
                     </div>
                     <div className="flex gap-2 pt-0.5">
                       <button

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from '@/lib/toast'
+import DatePicker from '@/components/DatePicker'
 
 interface Holiday { id: string; holiday_date: string; name: string }
 interface LeaveRecord { id: string; developer_id: string; leave_date: string; leave_type: string; note: string | null }
@@ -123,8 +124,8 @@ export default function SettingsClient({
         </div>
 
         <form onSubmit={addHoliday} className="flex flex-col sm:flex-row gap-2">
-          <input type="date" value={newHoliday.date} onChange={e => setNewHoliday(p => ({ ...p, date: e.target.value }))}
-            className={`${inputCls} w-full sm:w-44`} />
+          <DatePicker value={newHoliday.date} onChange={v => setNewHoliday(p => ({ ...p, date: v }))}
+            className="w-full sm:w-44" />
           <input type="text" placeholder="Holiday name (e.g. Eid ul-Fitr)" value={newHoliday.name}
             onChange={e => setNewHoliday(p => ({ ...p, name: e.target.value }))}
             className={`${inputCls} flex-1`} />
@@ -179,8 +180,8 @@ export default function SettingsClient({
             {developers.map(d => <option key={d.id} value={d.id}>{d.full_name}</option>)}
           </select>
           <div className="flex gap-2">
-            <input type="date" value={newLeave.date} onChange={e => setNewLeave(p => ({ ...p, date: e.target.value }))}
-              className={`${inputCls} flex-1`} />
+            <DatePicker value={newLeave.date} onChange={v => setNewLeave(p => ({ ...p, date: v }))}
+              className="flex-1" />
             <select value={newLeave.type} onChange={e => setNewLeave(p => ({ ...p, type: e.target.value }))}
               className={inputCls}>
               <option value="full">Full day</option>
