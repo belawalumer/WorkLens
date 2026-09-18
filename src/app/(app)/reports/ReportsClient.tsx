@@ -88,7 +88,7 @@ function workingDaysInMonth(year: number, month: number, holidayDates: string[])
 }
 
 export default function ReportsClient({ profiles, tasks, holidayDates, leaveRecords }: Props) {
-  const period: Period = 'month'
+  const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all')
@@ -219,18 +219,19 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
               {isExpanded && (
                 <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-5 space-y-6">
 
-                  {/* Quick stats: always today / this week / this month */}
+                  {/* Quick stats — clickable, filter the task list below */}
                   <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { label: 'Today', s: todayS },
-                      { label: 'This Week', s: weekS },
-                      { label: 'This Month', s: monthS },
-                    ].map(({ label, s: st }) => (
-                      <div key={label} className="bg-white border border-slate-200 rounded-xl px-4 py-3">
-                        <p className="text-[11px] text-slate-600 font-semibold">{label}</p>
-                        <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">{fmt(st.hours)}<span className="text-sm font-semibold text-slate-500 ml-0.5">h</span></p>
-                        <p className="text-xs text-slate-600 mt-0.5">{st.total} tasks · {st.done} done</p>
-                      </div>
+                    {([
+                      { key: 'today' as const, label: 'Today',      s: todayS },
+                      { key: 'week'  as const, label: 'This Week',  s: weekS  },
+                      { key: 'month' as const, label: 'This Month', s: monthS },
+                    ]).map(({ key, label, s: st }) => (
+                      <button key={key} onClick={e => { e.stopPropagation(); setPeriod(key); setTaskFilter('all') }}
+                        className={`text-left rounded-xl px-4 py-3 border transition-all ${period === key ? 'border-brand-500 bg-brand-50' : 'bg-white border-slate-200 hover:border-brand-200'}`}>
+                        <p className={`text-[11px] font-semibold ${period === key ? 'text-brand-600' : 'text-slate-600'}`}>{label}</p>
+                        <p className={`text-2xl font-bold mt-1 tabular-nums ${period === key ? 'text-brand-700' : 'text-slate-900'}`}>{fmt(st.hours)}<span className="text-sm font-semibold text-slate-500 ml-0.5">h</span></p>
+                        <p className="text-xs text-slate-500 mt-0.5">{st.total} tasks · {st.done} done</p>
+                      </button>
                     ))}
                   </div>
 
@@ -268,7 +269,7 @@ export default function ReportsClient({ profiles, tasks, holidayDates, leaveReco
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                        Tasks — This Month
+                        Tasks — {period === 'today' ? 'Today' : period === 'week' ? 'This Week' : 'This Month'}
                       </p>
                       <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden text-xs">
                         {(['all', 'done', 'pending'] as TaskFilter[]).map(f => (

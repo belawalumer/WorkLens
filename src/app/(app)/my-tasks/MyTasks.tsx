@@ -206,8 +206,8 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
 
   const todayTasks = tasks.filter(t => t.task_date === TODAY)
   const totalToday = todayTasks.reduce((s, t) => s + t.estimated_hours, 0)
-  const doneToday = todayTasks.filter(t => t.completed).reduce((s, t) => s + t.estimated_hours, 0)
-  const freeToday = Math.max(0, 8 - totalToday)
+  const doneToday  = todayTasks.filter(t => t.completed).reduce((s, t) => s + t.estimated_hours, 0)
+  const freeToday  = Math.max(0, 8 - totalToday)
 
   const groupedDates = useMemo(() => {
     const dateSet = new Set(tasks.map(t => t.task_date).filter(d => d >= WEEK_START))
@@ -245,8 +245,8 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
       })()}
 
       {/* ── Header ───────────────────────────────────────────────── */}
-      <div className="mb-5 bg-gradient-to-br from-brand-600 to-brand-800 rounded-2xl px-5 pt-5 pb-4 shadow-lg shadow-brand-900/20">
-        <div className="flex items-start justify-between gap-4">
+      <div className="mb-4 bg-gradient-to-br from-brand-600 to-brand-800 rounded-2xl px-5 py-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-brand-200 text-[11px] font-semibold uppercase tracking-widest mb-1">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -254,41 +254,28 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
             <h1 className="text-2xl font-bold text-white leading-tight">My Tasks</h1>
           </div>
           <button onClick={() => openModal()}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white text-brand-700 text-sm font-semibold rounded-xl hover:bg-brand-50 transition-colors shadow-sm shrink-0 mt-0.5">
+            className="flex items-center gap-1.5 px-4 py-2 bg-white text-brand-700 text-sm font-semibold rounded-xl hover:bg-brand-50 transition-colors shrink-0">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add task
           </button>
         </div>
+      </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="bg-white/20 border border-white/10 rounded-xl px-3 py-2.5">
-            <p className="text-white/60 text-[10px] font-semibold uppercase tracking-wide mb-0.5">Planned</p>
-            <p className="text-white text-xl font-bold leading-none">{fmt(totalToday)}<span className="text-white/60 text-xs font-normal ml-0.5">h</span></p>
+      {/* ── Stat cards ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        {[
+          { label: 'Planned', value: totalToday, sub: `${todayTasks.length} tasks` },
+          { label: 'Done',    value: doneToday,  sub: `${todayTasks.filter(t => t.completed).length} of ${todayTasks.length} tasks` },
+          { label: 'Free',    value: freeToday,  sub: 'hours remaining' },
+        ].map(({ label, value, sub }) => (
+          <div key={label} className="bg-white border border-slate-200 rounded-2xl px-4 py-3">
+            <p className="text-xs font-semibold text-slate-500 mb-1">{label}</p>
+            <p className="text-2xl font-bold text-slate-800 leading-none">
+              {fmt(value)}<span className="text-sm font-normal text-slate-400 ml-0.5">h</span>
+            </p>
+            <p className="text-xs text-slate-400 mt-1">{sub}</p>
           </div>
-          <div className="bg-brand-900/55 border border-brand-800/40 rounded-xl px-3 py-2.5">
-            <p className="text-white/60 text-[10px] font-semibold uppercase tracking-wide mb-0.5">Done</p>
-            <p className="text-white text-xl font-bold leading-none">{fmt(doneToday)}<span className="text-white/60 text-xs font-normal ml-0.5">h</span></p>
-          </div>
-          <div className={`rounded-xl px-3 py-2.5 border ${freeToday <= 1 ? 'bg-brand-900/75 border-brand-800/50' : 'bg-brand-100/15 border-brand-50/10'}`}>
-            <p className="text-white/60 text-[10px] font-semibold uppercase tracking-wide mb-0.5">Free</p>
-            <p className="text-white text-xl font-bold leading-none">{fmt(freeToday)}<span className="text-white/60 text-xs font-normal ml-0.5">h</span></p>
-          </div>
-        </div>
-
-        {totalToday > 0 && (
-          <div className="mt-3">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-brand-200 text-[10px] font-medium">Today&apos;s progress</p>
-              <p className="text-brand-200 text-[10px] font-semibold">{Math.round((doneToday / totalToday) * 100)}%</p>
-            </div>
-            <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-white rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (doneToday / totalToday) * 100)}%` }}
-              />
-            </div>
-          </div>
-        )}
+        ))}
       </div>
 
       {/* ── Board ─────────────────────────────────────────────────── */}
