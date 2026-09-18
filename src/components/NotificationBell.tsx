@@ -8,7 +8,7 @@ import { Role, Task } from '@/types'
 interface Notif {
   id: string
   message: string
-  type: 'task_added' | 'task_completed' | 'task_updated' | 'member_joined'
+  type: 'task_added' | 'task_completed' | 'task_updated' | 'member_joined' | 'assist_available'
   at: Date
   read: boolean
 }
@@ -20,10 +20,11 @@ interface ToastNotif {
 }
 
 const TYPE_ICON: Record<Notif['type'], string> = {
-  task_added:    '📋',
-  task_completed:'✅',
-  task_updated:  '✏️',
-  member_joined: '👋',
+  task_added:       '📋',
+  task_completed:   '✅',
+  task_updated:     '✏️',
+  member_joined:    '👋',
+  assist_available: '🙋',
 }
 
 function isToday(d: Date) {
@@ -117,6 +118,19 @@ export default function NotificationBell({ userRole, userId }: { userRole: Role;
         if (p.id === userId) return
         profileMap.current[p.id] = p.full_name
         push({ type: 'member_joined', message: `${p.full_name} joined the team` })
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, ({ new: n, old: o }) => {
+        const row = n as { id: string; full_name: string; assist_until?: string | null }
+        const prev = o as { assist_until?: string | null }
+        if (row.id === userId) return
+        const now = Date.now()
+        const wasActive = !!(prev.assist_until && new Date(prev.assist_until).getTime() > now)
+        const isActive = !!(row.assist_until && new Date(row.assist_until).getTime() > now)
+        if (!wasActive && isActive) {
+          const name = row.full_name || profileMap.current[row.id] || 'Someone'
+          profileMap.current[row.id] = name
+          push({ type: 'assist_available', message: `${name} is available to provide assistance` })
+        }
       })
       .subscribe()
 

@@ -28,6 +28,26 @@ export interface Profile {
   status_from?: string | null
   status_until?: string | null
   whatsapp?: string | null
+  /** ISO timestamptz; future = offering help, null/past = not */
+  assist_until?: string | null
+}
+
+export function isAssisting(assistUntil?: string | null, now = Date.now()): boolean {
+  if (!assistUntil) return false
+  return new Date(assistUntil).getTime() > now
+}
+
+/** Remaining time label, e.g. "3h 20m" / "45m" / "Expired". */
+export function formatAssistRemaining(assistUntil: string | Date, now = Date.now()): string {
+  const end = typeof assistUntil === 'string' ? new Date(assistUntil).getTime() : assistUntil.getTime()
+  const ms = end - now
+  if (ms <= 0) return 'Expired'
+  const totalMins = Math.ceil(ms / 60_000)
+  const h = Math.floor(totalMins / 60)
+  const m = totalMins % 60
+  if (h <= 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
 }
 
 export function formatStatusSub(

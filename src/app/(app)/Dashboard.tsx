@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import useSWR from 'swr'
+import { useEffect, useState } from 'react'
+import useSWR, { mutate as globalMutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus } from '@/types'
 import DeveloperCard from '@/components/DeveloperCard'
@@ -123,6 +123,16 @@ export default function Dashboard({
     async () => (await supabase.from('developer_roles').select('*, project:projects(id, name)')).data ?? [],
     { fallbackData: initRoles, revalidateOnFocus: true },
   )
+
+  useEffect(() => {
+    const ch = supabase
+      .channel('dashboard-profiles')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, () => {
+        globalMutate('profiles')
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const developers = buildDeveloperData(profiles, roles, tasks)
 
