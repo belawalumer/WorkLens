@@ -74,7 +74,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
       {assisting && dev.assist_until && (
         <div className="absolute top-0 -translate-y-1/2 left-4 z-10 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500 text-white shadow-sm pointer-events-none">
           <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
-          Open to help · {formatAssistRemaining(dev.assist_until, now)}
+          Open to help · {formatAssistRemaining(dev.assist_until)}
         </div>
       )}
 
