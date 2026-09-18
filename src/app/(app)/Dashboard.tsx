@@ -111,6 +111,7 @@ export default function Dashboard({
   profiles: initProfiles, roles: initRoles, tasks: initTasks, currentUserId, currentUserRole, todayHoliday,
 }: Props) {
   const [filter, setFilter] = useState<FilterStatus>('all')
+  const [forceShowDashboard, setForceShowDashboard] = useState(false)
   const supabase = createClient()
 
   const { data: todayLeaves = [] } = useSWR<{ developer_id: string; leave_type: string }[]>(
@@ -146,6 +147,30 @@ export default function Dashboard({
       })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-dismiss rest day screen at 12:01 AM when a real workday starts.
+  // Reschedules each night and re-checks the DB so multi-day holidays and
+  // full Sat+Sun weekends all clear on the correct morning.
+  useEffect(() => {
+    const dow = new Date().getDay()
+    if (dow !== 0 && dow !== 6 && !todayHoliday) return
+    let id: ReturnType<typeof setTimeout>
+    function schedule() {
+      const n = new Date()
+      const next = new Date(n)
+      next.setDate(n.getDate() + 1)
+      next.setHours(0, 1, 0, 0)
+      id = setTimeout(async () => {
+        const d = new Date().getDay()
+        const isWeekendDay = d === 0 || d === 6
+        const { data } = await supabase.from('public_holidays').select('name').eq('holiday_date', getToday()).maybeSingle()
+        if (!isWeekendDay && !data) setForceShowDashboard(true)
+        else schedule()
+      }, next.getTime() - n.getTime())
+    }
+    schedule()
+    return () => clearTimeout(id)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const developers = buildDeveloperData(profiles, roles, tasks)
@@ -199,6 +224,112 @@ export default function Dashboard({
   const h = parseInt(now.toLocaleString('en-US', { timeZone: 'Asia/Karachi', hour: 'numeric', hour12: false })) % 24
   const greeting = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'
   const firstName = profiles.find(p => p.id === currentUserId)?.full_name?.split(' ')[0] ?? ''
+
+  // ── Rest day screen (weekend / public holiday) ──────────────────────────────
+  if ((isWeekend || !!todayHoliday) && !forceShowDashboard) {
+    const isSaturday = dayOfWeek === 6
+    const isHoliday = !!todayHoliday
+
+    const headline    = isHoliday ? todayHoliday! : isSaturday ? 'Happy Saturday!' : 'Happy Sunday!'
+    const mainEmoji   = isHoliday ? '🎉' : isSaturday ? '🏡' : '☀️'
+    const subline     = isHoliday
+      ? `It's a public holiday — enjoy the day off${firstName ? `, ${firstName}` : ''}!`
+      : `Take it easy${firstName ? `, ${firstName}` : ''}. Today is yours.`
+    const body        = isHoliday
+      ? 'Wishing you joy, rest, and quality time with loved ones.'
+      : "Hope you're having a relaxing weekend with your loved ones! 🏡✨"
+
+    const bgGradient    = isHoliday ? 'from-brand-50 via-purple-50/60 to-indigo-50' : isSaturday ? 'from-amber-50 via-orange-50/60 to-rose-50' : 'from-sky-50 via-blue-50/60 to-indigo-50'
+    const headlineGrad  = isHoliday ? 'from-brand-600 to-purple-600' : isSaturday ? 'from-amber-600 to-orange-500' : 'from-sky-600 to-indigo-600'
+    const ringColor     = isHoliday ? 'ring-brand-200 shadow-brand-100' : isSaturday ? 'ring-amber-200 shadow-amber-100' : 'ring-sky-200 shadow-sky-100'
+    const pillBg        = isHoliday ? 'bg-brand-100 text-brand-700' : isSaturday ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'
+    const pillLabel     = isHoliday ? '🗓 Public Holiday' : isSaturday ? '📅 Saturday' : '📅 Sunday'
+
+    const floaters: { emoji: string; top: string; left: string; delay: string; duration: string }[] = isHoliday ? [
+      { emoji: '✨', top: '12%', left: '8%',  delay: '0s',    duration: '2.4s' },
+      { emoji: '🎊', top: '18%', left: '85%', delay: '0.4s',  duration: '2.8s' },
+      { emoji: '🌟', top: '70%', left: '6%',  delay: '0.7s',  duration: '3.1s' },
+      { emoji: '🎈', top: '75%', left: '88%', delay: '0.2s',  duration: '2.6s' },
+      { emoji: '🎁', top: '42%', left: '3%',  delay: '0.9s',  duration: '3.4s' },
+      { emoji: '🥳', top: '40%', left: '92%', delay: '0.5s',  duration: '2.9s' },
+    ] : isSaturday ? [
+      { emoji: '🌿', top: '14%', left: '7%',  delay: '0s',    duration: '2.6s' },
+      { emoji: '☕', top: '20%', left: '84%', delay: '0.5s',  duration: '3s'   },
+      { emoji: '📖', top: '68%', left: '5%',  delay: '0.8s',  duration: '2.8s' },
+      { emoji: '🎵', top: '72%', left: '87%', delay: '0.3s',  duration: '3.2s' },
+      { emoji: '🌸', top: '44%', left: '2%',  delay: '1s',    duration: '3.5s' },
+      { emoji: '🍃', top: '38%', left: '93%', delay: '0.6s',  duration: '2.7s' },
+    ] : [
+      { emoji: '🌤', top: '12%', left: '8%',  delay: '0s',    duration: '2.5s' },
+      { emoji: '🌸', top: '18%', left: '84%', delay: '0.4s',  duration: '3s'   },
+      { emoji: '💆', top: '70%', left: '6%',  delay: '0.7s',  duration: '2.8s' },
+      { emoji: '🍃', top: '74%', left: '86%', delay: '0.2s',  duration: '3.3s' },
+      { emoji: '☁️', top: '42%', left: '2%',  delay: '0.9s',  duration: '3.6s' },
+      { emoji: '🌙', top: '40%', left: '92%', delay: '0.5s',  duration: '2.9s' },
+    ]
+
+    return (
+      <div className={`fixed top-14 inset-x-0 bottom-0 z-30 bg-gradient-to-br ${bgGradient} flex flex-col items-center justify-center overflow-hidden px-6`}>
+
+        {/* Soft background blobs */}
+        <div className="absolute top-16 left-12 w-72 h-72 bg-white/50 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-16 right-12 w-56 h-56 bg-white/40 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] bg-white/20 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Floating emojis */}
+        {floaters.map((f, i) => (
+          <span
+            key={i}
+            className="absolute text-2xl select-none pointer-events-none opacity-50 animate-bounce"
+            style={{ top: f.top, left: f.left, animationDelay: f.delay, animationDuration: f.duration }}
+          >
+            {f.emoji}
+          </span>
+        ))}
+
+        {/* Main content */}
+        <div className="relative z-10 flex flex-col items-center text-center max-w-sm gap-5">
+
+          {/* Big emoji ring */}
+          <div className={`w-28 h-28 rounded-full bg-white shadow-2xl ring-4 ${ringColor} flex items-center justify-center text-5xl`}>
+            {mainEmoji}
+          </div>
+
+          {/* Day pill */}
+          <span className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold ${pillBg} shadow-sm`}>
+            {pillLabel}
+          </span>
+
+          {/* Headline */}
+          <h1 className={`text-4xl sm:text-5xl font-black bg-gradient-to-r ${headlineGrad} bg-clip-text text-transparent leading-tight tracking-tight`}>
+            {headline}
+          </h1>
+
+          {/* Subline + body */}
+          <div className="space-y-1.5">
+            <p className="text-base font-medium text-slate-600">{subline}</p>
+            <p className="text-sm text-slate-400 leading-relaxed">{body}</p>
+          </div>
+
+          {/* Date badge */}
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-white/70 backdrop-blur-sm rounded-full border border-white/80 shadow-sm text-sm font-medium text-slate-500">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </div>
+        </div>
+
+        {/* View dashboard link */}
+        <button
+          onClick={() => setForceShowDashboard(true)}
+          className="absolute bottom-8 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          View dashboard anyway →
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
