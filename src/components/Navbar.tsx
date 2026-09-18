@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useRef, useState, useEffect } from 'react'
 import { mutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
-import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub, UNAVAILABLE_STATUSES, isAssisting, formatAssistRemaining } from '@/types'
+import { Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub, UNAVAILABLE_STATUSES, isAssisting, formatAssistRemaining, WorkloadStatus } from '@/types'
 import { toast } from '@/lib/toast'
 
 const ASSIST_PRESETS = [1, 2, 3, 4] as const
@@ -25,11 +25,12 @@ interface Props {
   statusFrom: string | null
   statusUntil: string | null
   assistUntil: string | null
+  workloadStatus: WorkloadStatus
 }
 
 const TODAY = new Date().toISOString().split('T')[0]
 
-export default function Navbar({ userName, userRole, userId, userStatus, statusFrom, statusUntil, assistUntil }: Props) {
+export default function Navbar({ userName, userRole, userId, userStatus, statusFrom, statusUntil, assistUntil, workloadStatus }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -50,7 +51,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
   const supabase = createClient()
 
   const assisting = isAssisting(localAssistUntil, now)
-  const canStartAssist = !assisting && !UNAVAILABLE_STATUSES.includes(status)
+  const canStartAssist = !assisting && !UNAVAILABLE_STATUSES.includes(status) && (workloadStatus === 'available' || workloadStatus === 'underloaded')
 
   useEffect(() => {
     if (!localAssistUntil) return
@@ -215,7 +216,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
                     {ASSIST_PRESETS.map(h => (
                       <button key={h} type="button" disabled={assistSaving} onClick={() => startAssist(h)}
                         className="text-xs font-semibold py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors disabled:opacity-50">
-                        {h}h
+                        {String(h).padStart(2, '0')}:00
                       </button>
                     ))}
                   </div>
@@ -390,7 +391,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
                     {ASSIST_PRESETS.map(h => (
                       <button key={h} type="button" disabled={assistSaving} onClick={() => { startAssist(h); setMobileMenuOpen(false) }}
                         className="text-xs font-semibold py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors disabled:opacity-50">
-                        {h}h
+                        {String(h).padStart(2, '0')}:00
                       </button>
                     ))}
                   </div>
