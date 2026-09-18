@@ -12,10 +12,11 @@ interface RawNotif {
 }
 
 const TYPE_ICON: Record<string, string> = {
-  task_added:    '📋',
-  task_completed:'✅',
-  task_updated:  '✏️',
-  member_joined: '👋',
+  task_added:       '📋',
+  task_completed:   '✅',
+  task_updated:     '✏️',
+  member_joined:    '👋',
+  assist_available: '🙋',
 }
 
 function fmt(dateStr: string) {
