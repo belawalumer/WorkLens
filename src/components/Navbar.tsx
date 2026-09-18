@@ -156,7 +156,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(o => !o)}
-              className="flex items-center gap-2 pl-2 ml-1 border-l border-slate-200 hover:bg-slate-50 rounded-lg px-2 py-1.5 transition-colors"
+              className="flex items-center gap-2 pl-2 ml-1 px-2 py-1.5 transition-colors"
             >
               <div className="relative w-7 h-7 shrink-0">
                 <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center">
