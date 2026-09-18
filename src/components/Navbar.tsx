@@ -149,7 +149,7 @@ export default function Navbar({ userName, userRole, userId, userStatus, statusF
 
         {/* Right side */}
         <div className="flex items-center gap-2">
-          <NotificationBell userRole={userRole} userId={userId} />
+          {userRole !== 'hr_admin' && <NotificationBell userRole={userRole} userId={userId} />}
 
           {/* User dropdown */}
           <div className="relative" ref={dropdownRef}>

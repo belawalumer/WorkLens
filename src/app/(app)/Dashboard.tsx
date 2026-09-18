@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus } from '@/types'
+import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG } from '@/types'
 import DeveloperCard from '@/components/DeveloperCard'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
@@ -140,6 +140,13 @@ export default function Dashboard({
   const totalFreeCapacity = availableDevs.reduce((s, d) => s + d.freeHours, 0)
   const totalPlanned = activeDevs.reduce((s, d) => s + d.todayHours, 0)
   const avgLoad = activeDevs.length > 0 ? totalPlanned / activeDevs.length : 0
+
+  const onLeaveToday = developers.filter(d => {
+    if (!UNAVAILABLE_STATUSES.includes((d.user_status ?? 'active') as UserStatus)) return false
+    if (currentUserRole === 'developer') return d.role === 'developer'
+    if (currentUserRole === 'hr_admin') return d.role !== 'super_admin'
+    return true
+  })
 
   // Inactive today — derived from SWR data, auto-updates when tasks/profiles change
   const inactiveToday = developers.filter(d => {
@@ -278,6 +285,32 @@ export default function Dashboard({
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── On Leave Today ───────────────────────────────────────────── */}
+      {onLeaveToday.length > 0 && (
+        <div>
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
+            🏠 On Leave Today · {onLeaveToday.length}
+          </h2>
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
+            {onLeaveToday.map(dev => (
+              <div key={dev.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                  <span className="text-slate-500 font-bold text-xs">{initials(dev.full_name)}</span>
+                </div>
+                <p className="text-sm font-medium text-slate-700 flex-1 min-w-0 truncate">{dev.full_name}</p>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                  dev.user_status === 'vacation'
+                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                }`}>
+                  {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -10,7 +10,7 @@ interface LeaveRecord { id: string; developer_id: string; leave_date: string; le
 interface Dev { id: string; full_name: string }
 
 const TODAY = new Date().toISOString().split('T')[0]
-const LEAVE_LABELS: Record<string, string> = { full: 'Full day', half_morning: 'Half (morning)', half_afternoon: 'Half (afternoon)' }
+const LEAVE_LABELS: Record<string, string> = { full: 'Full day', half_morning: 'Half day', half_afternoon: 'Half day' }
 
 const inputCls = 'px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-slate-50 transition-colors'
 
@@ -184,8 +184,7 @@ export default function SettingsClient({
             <select value={newLeave.type} onChange={e => setNewLeave(p => ({ ...p, type: e.target.value }))}
               className={inputCls}>
               <option value="full">Full day</option>
-              <option value="half_morning">Half (AM)</option>
-              <option value="half_afternoon">Half (PM)</option>
+              <option value="half_morning">Half day</option>
             </select>
           </div>
           <button type="submit" disabled={addingLeave || !newLeave.developer_id}

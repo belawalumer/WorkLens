@@ -347,17 +347,9 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
                           {/* Project badge — opens fixed dropdown (see top of return) */}
                           <button
                             onClick={e => openProjectEdit(e, task.id)}
-                            className={`mt-0.5 text-[10px] px-1.5 py-0.5 rounded-md font-medium transition-colors ${
-                              task.project?.name
-                                ? 'bg-brand-50 text-brand-600 hover:bg-brand-100'
-                                : 'text-slate-400 hover:text-brand-600 hover:bg-slate-50'
-                            }`}>
-                            {task.project?.name ?? '+ project'}
+                            className="mt-0.5 text-[10px] px-1.5 py-0.5 rounded-md font-medium transition-colors border bg-brand-50 text-brand-600 border-brand-200 hover:bg-brand-100">
+                            {task.project?.name ?? 'Add Project'}
                           </button>
-
-                          {task.estimate_change_reason && (
-                            <span className="text-[10px] text-amber-600 mt-0.5 block">✏️ {task.estimate_change_reason}</span>
-                          )}
                         </div>
                       </div>
 
