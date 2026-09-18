@@ -111,16 +111,15 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
 
         {/* Name + role */}
         <div className="flex-1 min-w-0 pt-0.5">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="font-bold text-slate-900 text-sm leading-snug">{dev.full_name}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-bold text-slate-900 text-sm leading-snug truncate">{dev.full_name}</p>
             {isMe && <span className="text-[11px] text-brand-500 font-medium shrink-0">(you)</span>}
-            {showRoleBadge && (
-              <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold shrink-0 ${ROLE_BADGE[dev.role]}`}>
-                {ROLE_LABELS[dev.role]}
-              </span>
-            )}
           </div>
-          <p className="text-[11px] text-slate-500 mt-0.5">{primaryRole?.title ?? <>&nbsp;</>}</p>
+          <div className="mt-1">
+            <span className={`inline-block text-[11px] px-1.5 py-0.5 rounded font-semibold ${ROLE_BADGE[dev.role]}`}>
+              {ROLE_LABELS[dev.role]}
+            </span>
+          </div>
         </div>
 
       </div>

@@ -68,16 +68,15 @@ export default function MemberRow({ dev, isMe, viewerRole }: Props) {
 
         {/* Name + title */}
         <div className="w-44 shrink-0 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5">
             <p className="text-sm font-semibold text-slate-900 truncate">{dev.full_name}</p>
             {isMe && <span className="text-[11px] text-brand-500 font-medium shrink-0">(you)</span>}
-            {showRoleBadge && (
-              <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold shrink-0 ${ROLE_BADGE[dev.role]}`}>
-                {ROLE_LABELS[dev.role]}
-              </span>
-            )}
           </div>
-          <p className="text-[11px] text-slate-400 truncate">{primaryRole?.title ?? <>&nbsp;</>}</p>
+          <div className="mt-0.5">
+            <span className={`inline-block text-[11px] px-1.5 py-0.5 rounded font-semibold ${ROLE_BADGE[dev.role]}`}>
+              {ROLE_LABELS[dev.role]}
+            </span>
+          </div>
         </div>
 
         {/* Progress bar + hours */}
