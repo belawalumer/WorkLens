@@ -9,9 +9,17 @@ export default async function MyTasksPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const weekStart = (() => {
+    const d = new Date()
+    const day = d.getDay()
+    d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+    return d.toISOString().split('T')[0]
+  })()
+
   const [{ data: tasks }, { data: projects }] = await Promise.all([
     supabase.from('tasks').select('*, project:projects(id, name)')
       .eq('developer_id', user.id)
+      .gte('task_date', weekStart)
       .order('task_date', { ascending: false })
       .order('created_at', { ascending: false }),
     supabase.from('projects').select('id, name').order('name'),

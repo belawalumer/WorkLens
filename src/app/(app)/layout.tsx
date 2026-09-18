@@ -19,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const workloadStatus: WorkloadStatus = getWorkloadStatus(todayHours)
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
       <Navbar
         userName={profile?.full_name ?? user.email ?? ''}
         userRole={(profile?.role as Role) ?? 'developer'}
@@ -30,9 +30,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         assistUntil={profile?.assist_until ?? null}
         workloadStatus={workloadStatus}
       />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        <RealtimeProvider>{children}</RealtimeProvider>
-      </main>
+      <div className="flex-1 overflow-y-auto">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          <RealtimeProvider>{children}</RealtimeProvider>
+        </main>
+      </div>
     </div>
   )
 }

@@ -10,6 +10,7 @@ import DatePicker from '@/components/DatePicker'
 const TODAY = new Date().toISOString().split('T')[0]
 const YESTERDAY = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0] })()
 const TOMORROW = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0] })()
+const WEEK_START = (() => { const d = new Date(); d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1)); return d.toISOString().split('T')[0] })()
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
 
@@ -52,6 +53,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
     ['my-tasks', userId],
     async () => (await supabase.from('tasks').select('*, project:projects(id, name)')
       .eq('developer_id', userId)
+      .gte('task_date', WEEK_START)
       .order('task_date', { ascending: false })
       .order('created_at', { ascending: false })).data ?? [],
     { fallbackData: initialTasks, revalidateOnFocus: true },
@@ -208,7 +210,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
   const freeToday = Math.max(0, 8 - totalToday)
 
   const groupedDates = useMemo(() => {
-    const dateSet = new Set(tasks.map(t => t.task_date))
+    const dateSet = new Set(tasks.map(t => t.task_date).filter(d => d >= WEEK_START))
     dateSet.add(TODAY)
     return Array.from(dateSet).sort((a, b) => b.localeCompare(a))
   }, [tasks])
@@ -328,7 +330,7 @@ export default function MyTasks({ initialTasks, initialProjects, userId }: Props
               )}
 
               {/* Task cards */}
-              <div className={`flex flex-col gap-2 p-2 rounded-b-2xl border border-t-0 min-h-32 ${isToday ? 'bg-brand-50/40 border-brand-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={`flex flex-col gap-2 p-2 rounded-b-2xl border border-t-0 min-h-32 overflow-y-auto max-h-[490px] lg:max-h-[590px] ${isToday ? 'bg-brand-50/40 border-brand-200' : 'bg-slate-50 border-slate-200'}`}>
                 {dayTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <p className="text-slate-400 text-xs">No tasks yet</p>

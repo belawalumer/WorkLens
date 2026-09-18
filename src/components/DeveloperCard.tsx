@@ -59,7 +59,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
   const assisting     = isAssisting(dev.assist_until, now)
   const topBorder     = assisting
     ? 'border-t-emerald-500'
-    : isMe ? 'border-t-green-400' : isUnavailable ? 'border-t-slate-200' : (TOP_BORDER[dev.status] ?? 'border-t-slate-200')
+    : isUnavailable ? 'border-t-slate-200' : (TOP_BORDER[dev.status] ?? 'border-t-slate-200')
 
   useEffect(() => {
     if (!dev.assist_until) return
@@ -70,11 +70,21 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
   return (
     <div className={`relative overflow-visible bg-white rounded-2xl border border-slate-200 border-t-4 flex flex-col transition-opacity ${topBorder} ${isUnavailable ? 'opacity-60' : ''} ${assisting ? 'ring-1 ring-emerald-200' : ''}`}>
 
-      {/* ── Assist badge — straddles the top border ───────────── */}
-      {assisting && dev.assist_until && (
-        <div className="absolute top-0 -translate-y-1/2 left-4 z-10 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500 text-white shadow-sm pointer-events-none">
-          <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
-          Open to help · {formatAssistRemaining(dev.assist_until)}
+      {/* ── Badges — straddle the top border ─────────────────── */}
+      {!isUnavailable && (
+        <div className="absolute top-0 -translate-y-1/2 left-4 z-10 pointer-events-none">
+          <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold border shadow-sm ${STATUS_CONFIG[dev.status].bg} ${STATUS_CONFIG[dev.status].text} ${STATUS_CONFIG[dev.status].border}`}>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: STATUS_CONFIG[dev.status].solid }} />
+            {STATUS_CONFIG[dev.status].label}
+          </span>
+        </div>
+      )}
+      {assisting && dev.assist_until && !isUnavailable && (
+        <div className="absolute top-0 -translate-y-1/2 right-4 z-10 pointer-events-none">
+          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500 text-white shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
+            Open to help · {formatAssistRemaining(dev.assist_until)}
+          </span>
         </div>
       )}
 
@@ -111,18 +121,6 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
           <p className="text-[11px] text-slate-500 mt-0.5">{primaryRole?.title ?? <>&nbsp;</>}</p>
         </div>
 
-        {/* Workload / user status tag */}
-        {isUnavailable ? (
-          <span className="shrink-0 self-start flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border bg-slate-50 text-slate-500 border-slate-200">
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].dotBg}`} />
-            {USER_STATUS_CONFIG[(dev.user_status ?? 'active') as UserStatus].label}
-          </span>
-        ) : (
-          <span className={`shrink-0 self-start flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border ${STATUS_CONFIG[dev.status].bg} ${STATUS_CONFIG[dev.status].text} ${STATUS_CONFIG[dev.status].border}`}>
-            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: STATUS_CONFIG[dev.status].solid }} />
-            {STATUS_CONFIG[dev.status].label}
-          </span>
-        )}
       </div>
 
       {/* ── Stats + bar (active devs) ─────────────────────────── */}
