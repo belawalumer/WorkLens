@@ -11,6 +11,7 @@ import {
   STATUS_CONFIG,
   formatStatusSub,
   isAssisting,
+  isDevRole,
   formatAssistRemaining,
 } from '@/types'
 import Link from 'next/link'
@@ -31,6 +32,8 @@ const ROLE_BADGE: Record<Role, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
   hr_admin:    'bg-brand-100 text-brand-700',
   developer:   '',
+  sqa:         '',
+  ui_ux:       '',
 }
 
 const TOP_BORDER: Record<string, string> = {
@@ -52,7 +55,7 @@ export default function DeveloperCard({ dev, isMe, viewerRole }: Props) {
   const [now, setNow] = useState(() => Date.now())
 
   const primaryRole   = dev.roles[0]
-  const showRoleBadge = viewerRole !== 'developer' && dev.role !== 'developer'
+  const showRoleBadge = !isDevRole(viewerRole) && !isDevRole(dev.role)
   const isUnavailable = UNAVAILABLE_STATUSES.includes((dev.user_status ?? 'active') as UserStatus)
   const freeToday     = Math.max(0, dev.freeHours)
   const fillPct       = Math.min(100, (dev.todayHours / 8) * 100)

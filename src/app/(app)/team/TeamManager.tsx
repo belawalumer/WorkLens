@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
-import { Profile, Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub } from '@/types'
+import { Profile, Role, ROLE_LABELS, UserStatus, USER_STATUS_CONFIG, formatStatusSub, isDevRole } from '@/types'
 import { createUser, updateUserRole, deleteUser, resetUserPassword, updateUserProfile } from '@/app/actions/users'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from '@/lib/toast'
@@ -17,23 +17,28 @@ const ROLE_COLORS: Record<Role, string> = {
   super_admin: 'bg-purple-100 text-purple-700 border-purple-200',
   hr_admin:    'bg-brand-100 text-brand-700 border-brand-200',
   developer:   'bg-slate-100 text-slate-600 border-slate-200',
+  sqa:         'bg-slate-100 text-slate-600 border-slate-200',
+  ui_ux:       'bg-slate-100 text-slate-600 border-slate-200',
 }
 
 const AVATAR_BG: Record<Role, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
   hr_admin:    'bg-brand-100 text-brand-700',
   developer:   'bg-slate-100 text-slate-600',
+  sqa:         'bg-slate-100 text-slate-600',
+  ui_ux:       'bg-slate-100 text-slate-600',
 }
 
 function assignableRoles(viewerRole: Role): Role[] {
-  if (viewerRole === 'super_admin') return ['developer', 'hr_admin', 'super_admin']
-  return ['developer']
+  if (viewerRole === 'super_admin') return ['developer', 'sqa', 'ui_ux', 'hr_admin', 'super_admin']
+  if (viewerRole === 'hr_admin') return ['developer', 'sqa', 'ui_ux']
+  return ['developer', 'sqa', 'ui_ux']
 }
 
 function canManage(viewerRole: Role, targetRole: Role, isSelf: boolean): boolean {
   if (isSelf) return false
   if (viewerRole === 'super_admin') return true
-  if (viewerRole === 'hr_admin') return targetRole === 'developer'
+  if (viewerRole === 'hr_admin') return isDevRole(targetRole)
   return false
 }
 
@@ -81,7 +86,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
 
   const roles = assignableRoles(currentUserRole)
 
-  const counts: Record<Role, number> = { super_admin: 0, hr_admin: 0, developer: 0 }
+  const counts: Record<Role, number> = { super_admin: 0, hr_admin: 0, developer: 0, sqa: 0, ui_ux: 0 }
   members.forEach(m => counts[m.role]++)
 
   function openAddForm() {
@@ -171,7 +176,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
     : members
 
   const inputCls = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 bg-slate-50 transition-colors'
-  const gridCls = currentUserRole === 'developer'
+  const gridCls = isDevRole(currentUserRole)
     ? 'sm:grid-cols-[1fr_140px]'
     : 'sm:grid-cols-[1fr_140px_160px]'
 
@@ -193,7 +198,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
           <h1 className="text-xl font-bold text-slate-900">Team</h1>
           <p className="text-sm text-slate-500 mt-0.5">{members.length} members</p>
         </div>
-        {currentUserRole !== 'developer' && (
+        {!isDevRole(currentUserRole) && (
           <button onClick={openAddForm}
             className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm shadow-brand-200">
             + Add member
@@ -206,7 +211,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
         {summaryCards.map(([role, icon, label]) => (
           <div key={role} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center">
             <p className="text-lg">{icon}</p>
-            <p className="text-2xl font-bold text-slate-900 mt-0.5">{counts[role]}</p>
+            <p className="text-2xl font-bold text-slate-900 mt-0.5">{role === 'developer' ? counts.developer + counts.sqa + counts.ui_ux : counts[role]}</p>
             <p className="text-xs text-slate-500 mt-0.5">{label}</p>
           </div>
         ))}
@@ -305,7 +310,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
         <div className={`hidden sm:grid ${gridCls} gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200`}>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Member</span>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Role</span>
-          {currentUserRole !== 'developer' && (
+          {!isDevRole(currentUserRole) && (
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Actions</span>
           )}
         </div>
@@ -388,7 +393,7 @@ export default function TeamManager({ members: init, currentUserId, currentUserR
                 </div>
 
                 {/* Actions */}
-                <div className={`${currentUserRole === 'developer' ? 'hidden' : 'flex sm:justify-end'} items-center gap-1 flex-wrap mt-3 sm:mt-0`}>
+                <div className={`${isDevRole(currentUserRole) ? 'hidden' : 'flex sm:justify-end'} items-center gap-1 flex-wrap mt-3 sm:mt-0`}>
                   {manageable && !isEditingRole && (
                     <>
                       {/* Edit profile */}

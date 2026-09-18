@@ -1,4 +1,8 @@
-export type Role = 'super_admin' | 'hr_admin' | 'developer'
+export type Role = 'super_admin' | 'hr_admin' | 'developer' | 'sqa' | 'ui_ux'
+
+export function isDevRole(role: Role): boolean {
+  return role === 'developer' || role === 'sqa' || role === 'ui_ux'
+}
 export type WorkloadStatus = 'overloaded' | 'full' | 'underloaded' | 'available'
 export type UserStatus = 'active' | 'away' | 'dnd' | 'in_meeting' | 'on_leave' | 'vacation'
 
@@ -17,6 +21,8 @@ export const ROLE_LABELS: Record<Role, string> = {
   super_admin: 'Super Admin',
   hr_admin: 'HR Admin',
   developer: 'Developer',
+  sqa: 'SQA',
+  ui_ux: 'UI/UX',
 }
 
 export interface Profile {

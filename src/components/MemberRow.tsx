@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import {
   DeveloperWithData, Role, ROLE_LABELS,
-  UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, formatStatusSub,
+  UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, formatStatusSub, isDevRole,
 } from '@/types'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
@@ -16,6 +16,8 @@ const ROLE_BADGE: Record<Role, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
   hr_admin:    'bg-brand-100 text-brand-700',
   developer:   '',
+  sqa:         '',
+  ui_ux:       '',
 }
 
 const BAR_COLOR: Record<string, string> = {
@@ -36,7 +38,7 @@ export default function MemberRow({ dev, isMe, viewerRole }: Props) {
   const isUnavailable  = UNAVAILABLE_STATUSES.includes((dev.user_status ?? 'active') as UserStatus)
   const freeToday      = Math.max(0, dev.freeHours)
   const fillPct        = Math.min(100, (dev.todayHours / 8) * 100)
-  const showRoleBadge  = viewerRole !== 'developer' && dev.role !== 'developer'
+  const showRoleBadge  = !isDevRole(viewerRole) && !isDevRole(dev.role)
   const hasTasks = dev.tasks.length > 0
 
   return (

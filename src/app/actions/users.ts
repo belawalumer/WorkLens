@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { Role } from '@/types'
+import { Role, isDevRole } from '@/types'
 import { revalidatePath } from 'next/cache'
 
 async function getMyRole(): Promise<Role | null> {
@@ -28,7 +28,7 @@ export async function createUser(payload: {
 }) {
   const myRole = await getMyRole()
   if (!myRole) throw new Error('Unauthorized')
-  if (myRole === 'developer' && payload.role !== 'developer') throw new Error('Developers can only create developer accounts')
+  if (isDevRole(myRole) && !isDevRole(payload.role)) throw new Error('Developers can only create developer accounts')
   if (myRole === 'hr_admin' && payload.role === 'super_admin') throw new Error('HR admins cannot create super admins')
 
   const admin = createAdminClient()
@@ -54,12 +54,12 @@ export async function createUser(payload: {
 
 export async function updateUserRole(userId: string, newRole: Role) {
   const myRole = await getMyRole()
-  if (!myRole || myRole === 'developer') throw new Error('Unauthorized')
+  if (!myRole || isDevRole(myRole)) throw new Error('Unauthorized')
   if (myRole === 'hr_admin' && newRole === 'super_admin') throw new Error('HR admins cannot assign super_admin role')
 
   if (myRole === 'hr_admin') {
     const targetRole = await getTargetRole(userId)
-    if (targetRole !== 'developer') throw new Error('HR admins can only manage developers')
+    if (!isDevRole(targetRole!)) throw new Error('HR admins can only manage developers')
   }
 
   const admin = createAdminClient()
@@ -69,11 +69,11 @@ export async function updateUserRole(userId: string, newRole: Role) {
 
 export async function deleteUser(userId: string) {
   const myRole = await getMyRole()
-  if (!myRole || myRole === 'developer') throw new Error('Unauthorized')
+  if (!myRole || isDevRole(myRole)) throw new Error('Unauthorized')
 
   if (myRole === 'hr_admin') {
     const targetRole = await getTargetRole(userId)
-    if (targetRole !== 'developer') throw new Error('HR admins can only delete developers')
+    if (!isDevRole(targetRole!)) throw new Error('HR admins can only delete developers')
   }
 
   const admin = createAdminClient()
@@ -83,11 +83,11 @@ export async function deleteUser(userId: string) {
 
 export async function updateUserProfile(userId: string, payload: { fullName?: string; email?: string; whatsapp?: string | null }) {
   const myRole = await getMyRole()
-  if (!myRole || myRole === 'developer') throw new Error('Unauthorized')
+  if (!myRole || isDevRole(myRole)) throw new Error('Unauthorized')
 
   if (myRole === 'hr_admin') {
     const targetRole = await getTargetRole(userId)
-    if (targetRole !== 'developer') throw new Error('HR admins can only edit developers')
+    if (!isDevRole(targetRole!)) throw new Error('HR admins can only edit developers')
   }
 
   const admin = createAdminClient()
@@ -112,11 +112,11 @@ export async function updateUserProfile(userId: string, payload: { fullName?: st
 
 export async function resetUserPassword(userId: string, newPassword: string) {
   const myRole = await getMyRole()
-  if (!myRole || myRole === 'developer') throw new Error('Unauthorized')
+  if (!myRole || isDevRole(myRole)) throw new Error('Unauthorized')
 
   if (myRole === 'hr_admin') {
     const targetRole = await getTargetRole(userId)
-    if (targetRole !== 'developer') throw new Error('HR admins can only reset developer passwords')
+    if (!isDevRole(targetRole!)) throw new Error('HR admins can only reset developer passwords')
   }
 
   const admin = createAdminClient()

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, isAssisting } from '@/types'
+import { Profile, DeveloperRole, Task, DeveloperWithData, WorkloadStatus, getWorkloadStatus, Role, UNAVAILABLE_STATUSES, UserStatus, USER_STATUS_CONFIG, isAssisting, isDevRole } from '@/types'
 import DeveloperCard from '@/components/DeveloperCard'
 
 const fmt = (n: number) => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)
@@ -156,7 +156,7 @@ export default function Dashboard({
     : activeDevs.filter(d => d.status === 'overloaded')
 
   const overloadedCount = activeDevs.filter(d => d.status === 'overloaded').length
-  const availableDevs = activeDevs.filter(d => d.role === 'developer' && d.freeHours > 0)
+  const availableDevs = activeDevs.filter(d => isDevRole(d.role) && d.freeHours > 0)
   const availableCount = availableDevs.length
   const totalFreeCapacity = availableDevs.reduce((s, d) => s + d.freeHours, 0)
   const totalPlanned = activeDevs.reduce((s, d) => s + d.todayHours, 0)
@@ -164,7 +164,7 @@ export default function Dashboard({
 
   const onLeaveToday = developers.filter(d => {
     if (!UNAVAILABLE_STATUSES.includes((d.user_status ?? 'active') as UserStatus)) return false
-    if (currentUserRole === 'developer') return d.role === 'developer'
+    if (isDevRole(currentUserRole)) return isDevRole(d.role)
     if (currentUserRole === 'hr_admin') return d.role !== 'super_admin'
     return true
   })
@@ -173,7 +173,7 @@ export default function Dashboard({
   const inactiveToday = developers.filter(d => {
     if (d.tasks.length > 0) return false
     if (UNAVAILABLE_STATUSES.includes((d.user_status ?? 'active') as UserStatus)) return false
-    if (currentUserRole === 'developer') return d.role === 'developer'
+    if (isDevRole(currentUserRole)) return isDevRole(d.role)
     if (currentUserRole === 'hr_admin') return d.role !== 'super_admin'
     return true
   })
