@@ -19,8 +19,18 @@ const initials = (name: string) => {
 const inputCls = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-colors bg-white'
 const disabledCls = 'w-full px-3 py-2.5 border border-slate-100 rounded-xl text-sm bg-slate-50 text-slate-400'
 
+/** Strip to digits and return the 10-digit local part (without leading 92). */
+function toLocalWhatsapp(raw: string | null | undefined): string {
+  const digits = (raw ?? '').replace(/\D/g, '')
+  if (digits.startsWith('92') && digits.length >= 12) return digits.slice(2, 12)
+  if (digits.startsWith('0') && digits.length >= 11) return digits.slice(1, 11)
+  return digits.slice(0, 10)
+}
+
 export default function ProfileClient({ profile, userId }: Props) {
   const [fullName, setFullName] = useState(profile?.full_name ?? '')
+  const [whatsappLocal, setWhatsappLocal] = useState(() => toLocalWhatsapp(profile?.whatsapp))
+  const [waError, setWaError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -34,10 +44,25 @@ export default function ProfileClient({ profile, userId }: Props) {
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault()
+    setWaError('')
+    const local = whatsappLocal.replace(/\D/g, '').slice(0, 10)
+    if (local && local.length !== 10) {
+      setWaError('Enter a 10-digit number (e.g. 3211474522).')
+      return
+    }
+    const whatsapp = local ? `92${local}` : null
     setSaving(true)
-    await supabase.from('profiles').update({ full_name: fullName }).eq('id', userId)
-    mutate('profiles') // invalidate shared SWR cache so Dashboard/TeamManager update immediately
+    const { error } = await supabase
+      .from('profiles')
+      .update({ full_name: fullName, whatsapp })
+      .eq('id', userId)
     setSaving(false)
+    if (error) {
+      toast.error(error.message)
+      return
+    }
+    setWhatsappLocal(local)
+    mutate('profiles') // invalidate shared SWR cache so Dashboard/TeamManager update immediately
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
     toast.success('Profile saved')
@@ -108,6 +133,31 @@ export default function ProfileClient({ profile, userId }: Props) {
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Role</label>
               <input type="text" value={ROLE_LABELS[profile?.role as Role ?? 'developer']} disabled className={disabledCls} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">WhatsApp</label>
+              <div className="flex items-stretch">
+                <span className="inline-flex items-center px-3 border border-r-0 border-slate-200 rounded-l-xl bg-slate-50 text-sm font-medium text-slate-600 select-none">
+                  92
+                </span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  maxLength={10}
+                  placeholder="3211474522"
+                  value={whatsappLocal}
+                  onChange={e => {
+                    setWhatsappLocal(e.target.value.replace(/\D/g, '').slice(0, 10))
+                    setWaError('')
+                  }}
+                  className={`${inputCls} rounded-l-none`}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">Saved as 92XXXXXXXXXX (10 digits after 92).</p>
+              {waError && (
+                <p className="mt-1.5 text-xs text-red-600">{waError}</p>
+              )}
             </div>
             <div className="mt-auto pt-2">
               <button type="submit" disabled={saving}
