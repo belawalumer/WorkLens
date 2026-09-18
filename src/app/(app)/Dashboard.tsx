@@ -132,9 +132,12 @@ export default function Dashboard({
 
   useEffect(() => {
     const ch = supabase
-      .channel('dashboard-profiles')
+      .channel('dashboard-realtime')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, () => {
         globalMutate('profiles')
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        globalMutate('dashboard-tasks')
       })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
